@@ -1,0 +1,118 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Style Selector="Button">
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Padding" Value="12,8"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Background" Value="#FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#DFE5EE"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Foreground" Value="#344057"/>
+    </Style>
+    <Style Selector="Button:pointerover">
+      <Setter Property="Background" Value="#EDF3FF"/>
+      <Setter Property="BorderBrush" Value="#C5D6F6"/>
+    </Style>
+    <Style Selector="Window.motion Button">
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.12"/>
+          <BrushTransition Property="BorderBrush" Duration="0:0:0.12"/>
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button:disabled">
+      <Setter Property="Background" Value="#F3F5F8"/>
+      <Setter Property="BorderBrush" Value="#E9EDF3"/>
+      <Setter Property="Foreground" Value="#9BA5B4"/>
+    </Style>
+    <Style Selector="ComboBox, TextBox, NumericUpDown">
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="BorderBrush" Value="#DCE3ED"/>
+      <Setter Property="Background" Value="#FFFFFF"/>
+      <Setter Property="Foreground" Value="#293B52"/>
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="Padding" Value="8,4"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBox">
+      <Setter Property="Padding" Value="10,7"/>
+    </Style>
+    <Style Selector="NumericUpDown">
+      <Setter Property="MinHeight" Value="36"/>
+      <Setter Property="Padding" Value="10,4"/>
+    </Style>
+    <Style Selector="Border.sessionBadge">
+      <Setter Property="Background" Value="#EDF1F6"/>
+      <Setter Property="CornerRadius" Value="7"/>
+      <Setter Property="Padding" Value="8,4"/>
+    </Style>
+    <Style Selector="Border.sessionBadge TextBlock">
+      <Setter Property="Foreground" Value="#68788E"/>
+    </Style>
+    <Style Selector="Border.sessionBadge.connected">
+      <Setter Property="Background" Value="#EAF1FE"/>
+    </Style>
+    <Style Selector="Border.sessionBadge.connected TextBlock">
+      <Setter Property="Foreground" Value="#315DA4"/>
+    </Style>
+    <Style Selector="Border.sessionBadge.running">
+      <Setter Property="Background" Value="#E8F5EF"/>
+    </Style>
+    <Style Selector="Border.sessionBadge.running TextBlock">
+      <Setter Property="Foreground" Value="#267653"/>
+    </Style>
+    <Style Selector="Border.sessionBadge.waiting">
+      <Setter Property="Background" Value="#FFF3DF"/>
+    </Style>
+    <Style Selector="Border.sessionBadge.waiting TextBlock">
+      <Setter Property="Foreground" Value="#95651D"/>
+    </Style>
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="#345DAB"/>
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="BorderBrush" Value="#345DAB"/>
+    </Style>
+    <Style Selector="Button.primary:pointerover">
+      <Setter Property="Background" Value="#274D97"/>
+    </Style>
+    <Style Selector="Button.primary:disabled">
+      <Setter Property="Background" Value="#E4EAF4"/>
+      <Setter Property="BorderBrush" Value="#E4EAF4"/>
+      <Setter Property="Foreground" Value="#77859A"/>
+    </Style>
+    <Style Selector="Button:focus-visible">
+      <Setter Property="BorderBrush" Value="#345DAB"/>
+    </Style>
+    <Style Selector="Button.workspaceNav">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="15,9"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Button.workspaceNav.active">
+      <Setter Property="Background" Value="#EAF1FE"/>
+      <Setter Property="Foreground" Value="#315DA4"/>
+    </Style>
+    <Style Selector="TextBlock.heading">
+      <Setter Property="FontSize" Value="17"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="#202E43"/>
+    </Style>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="#65748A"/>
+    </Style>
+    <Style Selector="TextBlock.sectionTitle">
+      <Setter Property="Foreground" Value="#35445B"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="TabItem">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Padding" Value="11,8"/>
+    </Style>
+    <Style Selector="TabItem:selected">
+      <Setter Property="Foreground" Value="#315DA4"/>
+    </Style>
+</Styles>

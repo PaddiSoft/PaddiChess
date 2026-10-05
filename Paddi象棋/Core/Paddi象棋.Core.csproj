@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>PaddiXiangqi.Core</RootNamespace>
+    <PackageId>PaddiXiangqi.Core</PackageId>
+  </PropertyGroup>
+</Project>

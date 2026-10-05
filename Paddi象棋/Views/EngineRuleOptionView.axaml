@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:PaddiXiangqi" xmlns:vm="using:PaddiXiangqi.ViewModels"
+             x:Class="PaddiXiangqi.Views.EngineRuleOptionView" x:DataType="vm:EngineRuleOptionViewModel">
+  <Grid ColumnDefinitions="*,1.25*" ColumnSpacing="16" Margin="0,0,0,10">
+    <TextBlock Text="{Binding Label}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
+    <Grid Grid.Column="1" ToolTip.Tip="{Binding Hint}">
+      <local:SafeComboBox IsVisible="{Binding IsCombo}" ItemsSource="{Binding Choices}" SelectedItem="{Binding Choice, Mode=TwoWay}" HorizontalAlignment="Stretch" MinHeight="36" FontSize="12"/>
+      <CheckBox IsVisible="{Binding IsCheck}" IsChecked="{Binding Enabled, Mode=TwoWay}" Content="启用" FontSize="12"/>
+      <NumericUpDown IsVisible="{Binding IsSpin}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}"
+                     Value="{Binding Number, Mode=TwoWay}" Increment="1" FormatString="0" MinHeight="36" HorizontalAlignment="Stretch"/>
+      <TextBox IsVisible="{Binding IsText}" Text="{Binding Text, Mode=TwoWay}" MinHeight="36" FontSize="12"/>
+    </Grid>
+  </Grid>
+</UserControl>

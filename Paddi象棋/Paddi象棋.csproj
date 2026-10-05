@@ -1,0 +1,102 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>PaddiXiangqi</PackageId>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>Paddi象棋</AssemblyName>
+    <RootNamespace>PaddiXiangqi</RootNamespace>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Packaging/Paddi.ico</ApplicationIcon>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- RID-less development builds use the SDK host. Cross-publish must never
+         inherit executable assets from the machine running MSBuild. -->
+    <AssetRuntime Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</AssetRuntime>
+    <AssetRuntime Condition="'$(AssetRuntime)' == ''">$(NETCoreSdkRuntimeIdentifier)</AssetRuntime>
+    <BundledEngineFile Condition="'$(AssetRuntime)' == 'osx-arm64' Or '$(AssetRuntime)' == 'osx-x64'">Pikafish-MacOS-universal</BundledEngineFile>
+    <BundledEngineFile Condition="'$(AssetRuntime)' == 'win-x64'">Pikafish-Windows-x86-64-universal.exe</BundledEngineFile>
+    <BundledEngineFile Condition="'$(AssetRuntime)' == 'linux-x64'">Pikafish-Linux-x86-64-universal</BundledEngineFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Core/**;Engine/**;External/**;Services/**;Sessions/**" />
+    <ProjectReference Include="Core/Paddi象棋.Core.csproj" />
+    <ProjectReference Include="Engine/Paddi象棋.Engine.csproj" />
+    <ProjectReference Include="External/Paddi象棋.External.csproj" />
+    <ProjectReference Include="Services/Paddi象棋.Services.csproj" />
+    <ProjectReference Include="Sessions/Paddi象棋.Sessions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="Assets/Brand/*.png" />
+    <Content Include="Assets/BoardSkins/*.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Assets/BoardSkins/*.skin.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Assets/Ocr/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Native/Licenses/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Assets/Sounds/*.wav" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Packaging/ThirdParty/**/*" Link="Licenses/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <PackageReference Include="Avalonia" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.4" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.1">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="../Pikafish.2026-09-25/$(BundledEngineFile)" Link="Engine/$(BundledEngineFile)" Condition="'$(BundledEngineFile)' != ''" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../Pikafish.2026-09-25/pikafish.nnue" Link="Engine/pikafish.nnue" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The 0925 archive includes its NNUE license; retain the standard GPL text from the vendored source. -->
+    <Content Include="Native/PikafishRules/upstream/Copying.txt" Link="Engine/Copying.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Packaging/Engine-README.md" Link="Engine/README.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../Pikafish.2026-09-25/作者&amp;算力贡献_Authors&amp;Contributor.txt" Link="Engine/AUTHORS" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../Pikafish.2026-09-25/NNUE权重协议（使用视为同意本协议）_NNUE License.txt" Link="Engine/NNUE-License.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../Pikafish.2026-09-25/AI引擎介绍_AI Engine Introduction.txt" Link="Engine/Introduction.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../Pikafish.2026-09-25/更新日志_Update Log.txt" Link="Engine/UpdateLog.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <PropertyGroup>
+    <RulesRuntime Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</RulesRuntime>
+    <RulesRuntime Condition="'$(RulesRuntime)' == ''">$(NETCoreSdkRuntimeIdentifier)</RulesRuntime>
+    <RulesExecutable>PaddiRules</RulesExecutable>
+    <RulesExecutable Condition="$(RulesRuntime.StartsWith('win-'))">PaddiRules.exe</RulesExecutable>
+  </PropertyGroup>
+  <Target Name="ValidateBundledRuntime" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(BundledEngineFile)' == ''" Text="Unsupported bundled runtime $(AssetRuntime). Supported targets: osx-arm64, osx-x64, win-x64 and linux-x64." />
+  </Target>
+  <ItemGroup>
+    <RulesSources Include="Native/PikafishRules/upstream/**/*;Native/PikafishRules/*.cpp;Native/PikafishRules/*.h;Native/PikafishRules/build.sh;Native/PikafishRules/build.ps1;Native/PikafishRules/SOURCE.md" />
+  </ItemGroup>
+  <Target Name="BuildNativeRules" BeforeTargets="PrepareForBuild" Inputs="@(RulesSources)" Outputs="$(MSBuildProjectDirectory)/Native/PikafishRules/bin/$(RulesRuntime)/$(RulesExecutable);$(MSBuildProjectDirectory)/Native/PikafishRules/bin/PikafishRules-source.zip">
+    <Exec Condition="$([MSBuild]::IsOSPlatform('OSX')) Or $([MSBuild]::IsOSPlatform('Linux'))" Command="bash &quot;$(MSBuildProjectDirectory)/Native/PikafishRules/build.sh&quot; &quot;$(RulesRuntime)&quot;" />
+    <Exec Condition="$([MSBuild]::IsOSPlatform('Windows'))" Command="powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/Native/PikafishRules/build.ps1&quot; -Target &quot;$(RulesRuntime)&quot;" />
+  </Target>
+  <Target Name="IncludeNativeRules" BeforeTargets="AssignTargetPaths" DependsOnTargets="BuildNativeRules">
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)/Native/PikafishRules/bin/$(RulesRuntime)/$(RulesExecutable)')" Text="Missing native rule component. Run Native/PikafishRules/build.sh (macOS/Linux) or build.ps1 (Windows) for $(RulesRuntime) first." />
+    <ItemGroup>
+      <Content Include="Native/PikafishRules/bin/$(RulesRuntime)/$(RulesExecutable)" Link="Native/$(RulesExecutable)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+      <Content Include="Native/PikafishRules/bin/PikafishRules-source.zip" Link="Native/PikafishRules-source.zip" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+  <Target Name="BuildMacDesktopBridge" BeforeTargets="PrepareForBuild" Condition="$(AssetRuntime.StartsWith('osx-')) And $([MSBuild]::IsOSPlatform('OSX'))" Inputs="$(MSBuildProjectDirectory)/Native/PaddiBridge.swift;$(MSBuildProjectDirectory)/Native/CaptureGeometry.swift;$(MSBuildProjectDirectory)/Native/build-mac.sh" Outputs="$(MSBuildProjectDirectory)/Native/bin/PaddiBridge">
+    <Exec Command="bash &quot;$(MSBuildProjectDirectory)/Native/build-mac.sh&quot;" />
+  </Target>
+  <Target Name="IncludeMacDesktopBridge" BeforeTargets="AssignTargetPaths" DependsOnTargets="BuildMacDesktopBridge" Condition="$(AssetRuntime.StartsWith('osx-'))">
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)/Native/bin/PaddiBridge')" Text="The macOS desktop bridge must be built on macOS before publishing a macOS target." />
+    <ItemGroup>
+      <Content Include="Native/bin/PaddiBridge" Link="Native/PaddiBridge" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+  <!-- Our Release symbols are embedded. NuGet native runtime packages can ship
+       very large standalone PDBs containing upstream machine paths; these are
+       not needed to run the application and must not enter public packages. -->
+  <Target Name="RemoveExternalReleaseSymbols" AfterTargets="Publish" Condition="'$(Configuration)' == 'Release' And '$(PublishDir)' != ''">
+    <ItemGroup>
+      <ExternalReleaseSymbols Include="$(PublishDir)**/*.pdb" />
+    </ItemGroup>
+    <Delete Files="@(ExternalReleaseSymbols)" />
+  </Target>
+</Project>

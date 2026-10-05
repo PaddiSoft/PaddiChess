@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>PaddiXiangqi.Engine</RootNamespace>
+    <PackageId>PaddiXiangqi.Engine</PackageId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Core/Paddi象棋.Core.csproj" />
+  </ItemGroup>
+</Project>

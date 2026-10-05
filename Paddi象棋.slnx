@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="Paddi象棋/Core/Paddi象棋.Core.csproj" />
+  <Project Path="Paddi象棋/Engine/Paddi象棋.Engine.csproj" />
+  <Project Path="Paddi象棋/External/Paddi象棋.External.csproj" />
+  <Project Path="Paddi象棋/Services/Paddi象棋.Services.csproj" />
+  <Project Path="Paddi象棋/Sessions/Paddi象棋.Sessions.csproj" />
+  <Project Path="Paddi象棋/Paddi象棋.csproj" />
+  <Project Path="Paddi象棋.Tests/Paddi象棋.Tests.csproj" />
+</Solution>

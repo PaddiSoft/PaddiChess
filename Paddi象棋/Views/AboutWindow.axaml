@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:PaddiXiangqi"
+        x:Class="PaddiXiangqi.Views.AboutWindow"
+        Title="关于 Paddi象棋" Width="440" SizeToContent="Height"
+        CanResize="False" WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="32" Spacing="16">
+        <StackPanel Orientation="Horizontal" Spacing="16">
+            <Image Source="{x:Static local:BrandAssets.Logo}" Width="64" Height="64" />
+            <StackPanel VerticalAlignment="Center" Spacing="5">
+                <TextBlock Text="Paddi象棋" FontSize="28" FontWeight="SemiBold" />
+                <TextBlock Text="UCI 引擎 · 模型 API · 棋谱复盘" FontSize="13" />
+            </StackPanel>
+        </StackPanel>
+        <TextBlock Text="支持本地对弈、局面分析、自定义棋谱和外部棋盘接管。"
+                   TextWrapping="Wrap" />
+        <Button Content="关闭" HorizontalAlignment="Right" Click="OnCloseClick" />
+    </StackPanel>
+</Window>

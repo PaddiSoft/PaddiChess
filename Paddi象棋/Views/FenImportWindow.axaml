@@ -1,0 +1,14 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PaddiXiangqi.Views.FenImportWindow" Title="导入象棋 FEN" Width="620" Height="290"
+        MinWidth="460" MinHeight="270" WindowStartupLocation="CenterOwner" RequestedThemeVariant="Light" Background="#F5F7FB">
+  <Grid RowDefinitions="Auto,*,Auto,Auto" Margin="20" RowSpacing="12">
+    <TextBlock Text="粘贴象棋 FEN" Classes="heading"/>
+    <TextBox x:Name="FenInput" Grid.Row="1" AcceptsReturn="True" TextWrapping="Wrap"
+             PlaceholderText="粘贴象棋 FEN，例如 rnbakabnr/… w - - 0 1"/>
+    <TextBlock x:Name="ErrorText" Grid.Row="2" Foreground="#A23840" TextWrapping="Wrap"/>
+    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="取消" IsCancel="True" Click="Cancel_Click"/>
+      <Button Content="导入" Classes="primary" IsDefault="True" Click="Import_Click"/>
+    </StackPanel>
+  </Grid>
+</Window>

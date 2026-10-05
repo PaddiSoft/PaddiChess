@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PaddiXiangqi.ViewModels" x:Class="PaddiXiangqi.Views.MoveHistoryView"
+             x:DataType="vm:MoveHistoryViewModel">
+  <UserControl.Styles>
+    <Style Selector="Button.history">
+      <Setter Property="FontSize" Value="13"/><Setter Property="Padding" Value="8,6"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="HorizontalContentAlignment" Value="Left"/>
+      <Setter Property="Background" Value="#F9FAFD"/><Setter Property="BorderBrush" Value="#EEF1F6"/>
+      <Setter Property="Foreground" Value="#2D3D51"/>
+    </Style>
+    <Style Selector="Button.history.red"><Setter Property="Foreground" Value="#A23840"/></Style>
+    <Style Selector="Button.history.current">
+      <Setter Property="Background" Value="#EAF1FF"/><Setter Property="BorderBrush" Value="#B9D0FC"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+    <Style Selector="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0,0,0,5"/></Style>
+  </UserControl.Styles>
+  <UserControl.DataTemplates>
+    <DataTemplate DataType="vm:HistoryMoveViewModel">
+      <Button Classes="history" Classes.red="{Binding Red}" Classes.current="{Binding IsSelected}"
+              Content="{Binding Label}" Command="{Binding Select}"/>
+    </DataTemplate>
+  </UserControl.DataTemplates>
+  <ListBox x:Name="HistoryList" ItemsSource="{Binding Rows}" Background="Transparent" BorderThickness="0"
+           Padding="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+    <ListBox.ItemTemplate>
+      <DataTemplate x:DataType="vm:HistoryRowViewModel">
+        <Grid ColumnDefinitions="30,*,*" ColumnSpacing="5">
+          <ContentControl Grid.ColumnSpan="3" Content="{Binding Start}" IsVisible="{Binding IsStart}"/>
+          <TextBlock Text="{Binding Number}" IsVisible="{Binding IsTurn}" Foreground="#9AA6B7" Margin="7,0" VerticalAlignment="Center"/>
+          <ContentControl Grid.Column="1" Content="{Binding Red}" IsVisible="{Binding IsTurn}"/>
+          <ContentControl Grid.Column="2" Content="{Binding Black}" IsVisible="{Binding IsTurn}"/>
+        </Grid>
+      </DataTemplate>
+    </ListBox.ItemTemplate>
+  </ListBox>
+</UserControl>

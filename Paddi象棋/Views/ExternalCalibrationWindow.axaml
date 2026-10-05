@@ -1,0 +1,15 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:external="using:PaddiXiangqi.External" x:Class="PaddiXiangqi.Views.ExternalCalibrationWindow"
+        Title="标定外部棋盘 · 两个角的交叉点中心" Width="980" Height="820" MinWidth="700" MinHeight="500"
+        RequestedThemeVariant="Light" WindowStartupLocation="CenterOwner" Background="#F5F7FB">
+  <Grid RowDefinitions="Auto,*,Auto" Margin="16" RowSpacing="12">
+    <TextBlock x:Name="HelpText" Text="点击左上角交叉点中心，再点击右下角交叉点中心。" TextWrapping="Wrap"/>
+    <external:CalibrationView x:Name="Preview" Grid.Row="1"/>
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+      <Button x:Name="LocateButton" Content="自动找棋盘" Click="Locate_Click"/>
+      <Button Content="手动重选" Click="Reset_Click"/>
+      <Button Content="取消" IsCancel="True" Click="Cancel_Click"/>
+      <Button x:Name="AcceptButton" Content="采用此标定" Classes="primary" IsEnabled="False" Click="Accept_Click"/>
+    </StackPanel>
+  </Grid>
+</Window>

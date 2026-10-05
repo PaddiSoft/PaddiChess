@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:PaddiXiangqi" xmlns:vm="using:PaddiXiangqi.ViewModels"
+             x:Class="PaddiXiangqi.Views.PiecePaletteView" x:DataType="vm:PiecePaletteViewModel">
+  <UserControl.Resources>
+    <DataTemplate x:Key="PieceTemplate" x:DataType="vm:PiecePaletteItemViewModel">
+      <Button Classes="palette" Classes.selected="{Binding Selected}" IsEnabled="{Binding CanAdd}"
+              ToolTip.Tip="{Binding Hint}" AutomationProperties.Name="{Binding Hint}" Click="Piece_Click">
+        <StackPanel Spacing="2">
+          <local:PieceIcon Piece="{Binding Piece}" Width="40" Height="40"/>
+          <TextBlock Text="{Binding CountText}" FontSize="10" HorizontalAlignment="Center" Foreground="#576A82"/>
+        </StackPanel>
+      </Button>
+    </DataTemplate>
+  </UserControl.Resources>
+  <UserControl.Styles>
+    <Style Selector="Button.palette"><Setter Property="Padding" Value="4"/><Setter Property="Margin" Value="0,0,4,3"/>
+      <Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="2"/><Setter Property="CornerRadius" Value="10"/></Style>
+    <Style Selector="Button.palette.selected"><Setter Property="Background" Value="#E8F0FF"/><Setter Property="BorderBrush" Value="#4274CE"/></Style>
+    <Style Selector="Button.palette:disabled"><Setter Property="Opacity" Value="0.35"/></Style>
+  </UserControl.Styles>
+  <StackPanel Spacing="3">
+    <ItemsControl ItemsSource="{Binding Red}" ItemTemplate="{StaticResource PieceTemplate}">
+      <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+    </ItemsControl>
+    <ItemsControl ItemsSource="{Binding Black}" ItemTemplate="{StaticResource PieceTemplate}">
+      <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+    </ItemsControl>
+  </StackPanel>
+</UserControl>

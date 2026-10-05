@@ -1,0 +1,18 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="PaddiXiangqi.App"
+             Name="Paddi象棋"
+             RequestedThemeVariant="Default">
+             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <NativeMenu.Menu>
+        <NativeMenu>
+            <NativeMenuItem Header="关于 Paddi象棋" Click="OnAboutClick" />
+        </NativeMenu>
+    </NativeMenu.Menu>
+
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="/Styles/AppStyles.axaml"/>
+    </Application.Styles>
+</Application>

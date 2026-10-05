@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key><string>com.paddi.xiangqi</string>
+  <key>CFBundleName</key><string>Paddi象棋</string>
+  <key>CFBundleDisplayName</key><string>Paddi象棋</string>
+  <key>CFBundleExecutable</key><string>Paddi象棋</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleVersion</key><string>1.0.0</string>
+  <key>CFBundleShortVersionString</key><string>1.0.0</string>
+  <key>CFBundleIconFile</key><string>Paddi.icns</string>
+  <key>NSHighResolutionCapable</key><true/>
+</dict>
+</plist>

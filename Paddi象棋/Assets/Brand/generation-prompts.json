@@ -1,0 +1,18 @@
+{
+  "tool": "Built-in image_gen",
+  "created": "2026-09-26",
+  "prompts": [
+    {
+      "key": "paddi_logo",
+      "prompt": "Use case: logo-brand. Asset type: production macOS / Windows app icon for a modern Chinese chess app named Paddi象棋. Create ONE square 1024×1024 app icon, no mockup sheet. A refined cinnabar red rounded-square tile inset 8% with genuinely transparent space outside; inside, a cream ivory circular Chinese chess token with an elegant substantial engraved seal-like Chinese character 象, charcoal/antique-gold hairline double rim. Contemporary restrained premium board-game identity, warm tangible enamel and subtly bevelled wood, almost flat frontal orthographic view, high silhouette clarity at 32 pixels. Avoid dense detail, gradients that wash out edges, Latin letters, extra Chinese text, watermarks, hands, scenery. The only text is exactly 象. Center the symbol perfectly with balanced margins. This image must be ready to embed directly as an application icon."
+    },
+    {
+      "key": "paddi_wood",
+      "prompt": "Use case: stylized-concept. Asset type: quiet Chinese chess board surface texture for Paddi象棋 desktop app. Generate ONE flat orthographic full-bleed rectangular light warm honey maple wood surface, 1024 by 1536 portrait, extremely subtle close fine vertical wood grain with soft natural variation. Warm pale ochre/light maple roughly #EFD3A2, low contrast, evenly illuminated, elegant tactile furniture finish. This is a functional background under programmatically drawn Chinese chess grid and pieces: no lines, no chess pieces, no border, no frame, no characters, no logos, no vignettes, no knots, no shadows, no perspective, no dramatic ornament. Calm minimal broad continuous grain so fine text and grid will remain very legible."
+    },
+    {
+      "key": "paddi_background",
+      "prompt": "Use case: illustration-story. Asset type: full-bleed 1536×1024 landscape atmospheric background for Paddi象棋, a modern Chinese chess desktop client. Design a very restrained pale rice-paper ink landscape: soft warm ivory paper, distant gentle slate blue grey Chinese mountains barely visible along bottom quarter and far left/right edges, a thin misty river flowing horizontally near bottom, slight paper fiber. Leave the entire central 70% and upper 60% near empty light warm white so interface panels and controls remain readable. Refined contemporary Chinese literati painting with small muted cinnabar ink accent near distant horizon, extremely low contrast and almost monochrome. No calligraphy, no text, no logos, no chess pieces, no buildings, no people, no UI, no frames, no watermark."
+    }
+  ]
+}

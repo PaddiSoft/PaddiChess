@@ -1,0 +1,38 @@
+[
+  {
+    "file": "Avalonia-LICENSE.md",
+    "url": "https://raw.githubusercontent.com/AvaloniaUI/Avalonia/a8dd6417fd8918570edefdbecd92d16ac7620069/licence.md",
+    "sha256": "213814d306090074d234d760239ff0f67eb9b8d20eefb4d5631bb39dbe0b769b"
+  },
+  {
+    "file": "Avalonia-NOTICE.md",
+    "url": "https://raw.githubusercontent.com/AvaloniaUI/Avalonia/a8dd6417fd8918570edefdbecd92d16ac7620069/NOTICE.md",
+    "sha256": "dd6f80852d16320c865a2e403ffd1a8b07a0e34c5b37122c0bc2343639ff68e6"
+  },
+  {
+    "file": "Avalonia.BuildServices-LICENSE.txt",
+    "url": "https://raw.githubusercontent.com/AvaloniaUI/Avalonia.BuildServices/777f975b0a0cecf0311273711d56697212c558c0/LICENSE",
+    "sha256": "94162c40c663bd96ec1b870e6aba6ef0a43f44c9eb500807e7965e7078f6dc47"
+  },
+  {
+    "file": "MicroCom-LICENSE.txt",
+    "url": "https://raw.githubusercontent.com/kekekeks/MicroCom/28850f85fb586488828ab7267ed4a87e8c970b51/LICENSE",
+    "sha256": "6ee769c9ac4dac9abb16b98b1341e9528ff9f4ab685481410d3376d14148f3a9"
+  },
+  {
+    "file": "RecyclableMemoryStream-LICENSE.txt",
+    "url": "https://raw.githubusercontent.com/microsoft/Microsoft.IO.RecyclableMemoryStream/e29a28387da9018fa9605a1dcb3f7a0435aa9974/LICENSE",
+    "sha256": "7d6aa3550cf7aeb25ef542f616d8ead585633e3b607c65e1db4aa804e4971a91"
+  },
+  {
+    "file": "Tmds.DBus-COPYING.txt",
+    "url": "https://raw.githubusercontent.com/tmds/Tmds.DBus/282acebca8d4e4e3ba211646ac650911ee94edfd/COPYING",
+    "sha256": "aca3b49277abcc7886ccb2f115603a9f5b15fc3f96019a10c00f2974098b210c"
+  },
+  {
+    "file": "Inter-LICENSE.txt",
+    "url": "https://raw.githubusercontent.com/rsms/inter/0a5106e0bde18df09374066bf3a7998e3546307d/LICENSE.txt",
+    "sha256": "4d7d9c95e7d7f2f0ebf76d5e0b344826b74e903a34028ee18ab54bb639e45906",
+    "evidence": "Avalonia Fonts.Inter 12.0.4 bundled Inter-Regular.ttf name table: Version 3.019;git-0a5106e0b"
+  }
+]

@@ -1,0 +1,22 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <!-- Compiler caller paths and portable PDBs must not embed a developer home. -->
+    <PathMap>$(MSBuildThisFileDirectory)=/_/</PathMap>
+    <!-- Avalonia's XAML rewriter preserves embedded symbols without emitting an absolute external PDB path. -->
+    <DebugType Condition="'$(Configuration)' == 'Release'">embedded</DebugType>
+    <Product>Paddi象棋</Product>
+    <Title>Paddi象棋</Title>
+    <Description>Paddi象棋</Description>
+    <Company>Paddi</Company>
+    <Version>1.0.0</Version>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- Keep cross-platform publishing from rewriting the portable development lock. -->
+    <NuGetLockFilePath Condition="'$(RuntimeIdentifier)' != ''">$(MSBuildProjectDirectory)/packages.$(RuntimeIdentifier).lock.json</NuGetLockFilePath>
+  </PropertyGroup>
+</Project>

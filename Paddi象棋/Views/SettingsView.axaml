@@ -1,0 +1,170 @@
+<views:WorkspaceView xmlns="https://github.com/avaloniaui"
+                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                     xmlns:local="using:PaddiXiangqi"
+                     xmlns:views="using:PaddiXiangqi.Views"
+                     xmlns:vm="using:PaddiXiangqi.ViewModels"
+                     x:Class="PaddiXiangqi.Views.SettingsView" x:Name="WorkspaceRoot">
+  <ScrollViewer Margin="0,6,0,0" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <Grid ColumnDefinitions="*,*" ColumnSpacing="24" Margin="16,12,16,18">
+      <StackPanel Spacing="14">
+      <TextBlock Text="棋盘与评分" Classes="heading"/>
+      <CheckBox x:Name="ShowCoordinatesCheck" Content="显示棋盘坐标" FontSize="12"/>
+      <Grid ColumnDefinitions="*,150" ColumnSpacing="10">
+        <StackPanel Spacing="2">
+          <TextBlock Text="走棋动画时长" Foreground="#46566E"/>
+          <TextBlock Text="毫秒 · 0 关闭走棋与界面动效" Classes="muted" FontSize="11"/>
+        </StackPanel>
+        <NumericUpDown x:Name="AnimationMsBox" AutomationProperties.Name="走棋动画时长，毫秒" Grid.Column="1" Minimum="0" Maximum="1000"
+                       Value="230" Increment="50" FormatString="0"/>
+      </Grid>
+      <Border Height="1" Background="#E8EDF4"/>
+      <TextBlock Text="分析与对弈" Classes="heading"/>
+      <CheckBox x:Name="AutoAnalyzeCheck" Content="走棋后自动评分局面" FontSize="12"/>
+      <TextBlock Text="自动评分固定使用 1 线程、约 1 秒；引擎执棋与分析模式使用右侧参数。外部接管可单独选择评分策略。"
+                 Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+      <TextBlock Text="返回对弈页可为红黑双方选择执棋方式。双方都开启引擎即可自弈。" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+      <Border Background="#EEF4FC" CornerRadius="10" Padding="12">
+        <StackPanel Spacing="6">
+          <TextBlock Text="执棋规则 · 跟随所选引擎" Classes="sectionTitle"/>
+          <TextBlock x:Name="NativeRulesText" Text="引擎依据完整棋谱处理长将、长捉和循环。在“引擎插件”检测版本后，可设置其声明的亚洲规则、天规等选项；没有声明的参数不会强行发送。"
+                     Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+          <TextBlock Text="大模型使用独立的内置皮卡鱼规则裁判（0906），当前不继承其他引擎的规则选项。外部对局以目标游戏裁定为准；截图无法恢复接入前的棋谱。"
+                     Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+        </StackPanel>
+      </Border>
+      <Border Height="1" Background="#E8EDF4"/>
+      <TextBlock Text="引擎管理与性能" Classes="heading"/>
+      <Button Click="Action_Click" Tag="{x:Static views:WorkspaceAction.EngineManage}" Content="管理引擎插件 / 默认版本 →" HorizontalAlignment="Stretch"/>
+      <Border Background="#EEF4FC" CornerRadius="10" Padding="14">
+        <StackPanel Spacing="9">
+          <TextBlock Text="引擎性能测速" Foreground="#35445B" FontWeight="SemiBold" FontSize="13"/>
+          <TextBlock Text="用相同参数比较内置和自定义引擎的每秒搜索节点数。测速时会暂停当前分析。"
+                     Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+          <Button x:Name="BenchmarkButton" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.Benchmark}" Content="运行基准测速 · 1 线程"/>
+          <Button x:Name="ConfiguredBenchmarkButton" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.Benchmark}" Content="按当前线程 / 置换表测速"/>
+          <TextBlock x:Name="BenchmarkResultText" Text="尚未测速" Foreground="#405676" FontSize="11" TextWrapping="Wrap"/>
+        </StackPanel>
+      </Border>
+      <Button Click="Action_Click" Tag="{x:Static views:WorkspaceAction.ClearHash}" Content="清空当前引擎搜索缓存"/>
+      <Border Background="#F7F9FD" CornerRadius="10" Padding="12">
+        <StackPanel Spacing="7">
+        <TextBlock Text="参数说明" Classes="sectionTitle"/>
+        <TextBlock TextWrapping="Wrap" Classes="muted" FontSize="11"
+                   Text="棋力 20 为完整执棋搜索，低等级会限制时间、深度和着法选择。&#10;线程决定并行算力，置换表缓存重复局面；都不是思考时长。&#10;20 级默认按时间搜索；深度限制开启后，先达到时间或深度上限就先停。&#10;候选变化数只用于分析，多方案会分散搜索资源。&#10;开局截止回合：红黑各走一次算一回合；残局子力按双方合计。&#10;同步频率只影响看棋盘的速度与资源占用，不改变引擎棋力。"/>
+        </StackPanel>
+      </Border>
+      <ScrollViewer x:Name="ExternalConfigurationScroll" MaxHeight="520" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+      <Border Background="#F5F8FC" CornerRadius="10" Padding="11"
+              IsEnabled="{Binding ExternalConfigurationSource.IsEnabled, ElementName=WorkspaceRoot}">
+        <StackPanel Spacing="9">
+          <TextBlock Text="外部棋盘 · 识别与维护" Classes="heading"/>
+          <TextBlock x:Name="ExternalCalibrationText" Text="连接后自动识别棋盘、下方棋子和当前轮次" TextWrapping="Wrap" FontSize="11" Foreground="#52647A"/>
+          <TextBlock x:Name="ExternalDeliveryHintText" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+          <TextBlock x:Name="ExternalScoreHintText" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+          <Button Content="重新定位棋盘…" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.ExternalCalibrate}"/>
+          <Border Background="#F5F7FB" CornerRadius="8" ClipToBounds="True">
+            <Image x:Name="ExternalPreviewImage" Height="130" Stretch="Uniform" IsVisible="False"/>
+          </Border>
+          <TextBlock Text="自动识别棋子文字与红黑双方，支持不同客户端和皮肤；已识别样式用于加速，少数不确定棋子可直接修正。" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+          <local:SafeComboBox x:Name="ExternalSkinBox" HorizontalAlignment="Stretch"/>
+          <TextBox x:Name="ExternalSkinNameBox" PlaceholderText="样式名称，如：木纹棋盘" Text="默认棋盘"/>
+          <Button Content="学习已核对的完整开局" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.ExternalLearnSkin}"/>
+          <Button Content="截取并识别当前局面…" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.ExternalRecognize}"/>
+          <Border Height="1" Background="#DFE6EF"/>
+          <TextBlock Text="局面修正与 FEN" Classes="sectionTitle"/>
+          <Button Content="手动编辑起始局面…" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.ExternalEditPosition}"/>
+          <Grid x:Name="ExternalFenActions" ColumnDefinitions="*,*" ColumnSpacing="6">
+            <Button Content="标准开局" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.ExternalStandard}" Padding="7,6"/>
+            <Button Grid.Column="1" Content="使用左侧局面" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.ExternalUsePosition}" Padding="7,6"/>
+          </Grid>
+          <TextBox x:Name="ExternalFenBox" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="66" FontSize="11"/>
+          <TextBlock Text="支持识别后修正、手动摆棋或填写 FEN。无法自动判断行棋方时可在上方指定。"
+                     TextWrapping="Wrap" Classes="muted" FontSize="11"/>
+        </StackPanel>
+      </Border>
+      </ScrollViewer>
+      <Button Click="Action_Click" Tag="{x:Static views:WorkspaceAction.PlayWorkspace}" Content="返回对弈 →" HorizontalAlignment="Left"/>
+      </StackPanel>
+      <StackPanel Grid.Column="1" Spacing="14">
+      <TextBlock Text="执棋与分析预算" Classes="heading"/>
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="2">
+          <TextBlock Text="棋力等级" Foreground="#46566E" FontWeight="SemiBold"/>
+          <TextBlock Text="0–20 · 越高搜索越深入" Classes="muted" FontSize="11"/>
+        </StackPanel>
+        <TextBlock x:Name="LevelText" Grid.Column="1" Text="10" Foreground="#315DA4" FontSize="22" FontWeight="Bold"/>
+      </Grid>
+      <Slider x:Name="LevelSlider" Minimum="0" Maximum="20" Value="10" TickFrequency="1" IsSnapToTickEnabled="True"/>
+      <TextBlock x:Name="LevelHintText" Text="均衡 · 适合日常对弈" Classes="muted" FontSize="12"/>
+      <Border Background="#EEF4FC" CornerRadius="9" Padding="10">
+        <TextBlock x:Name="EffectiveSettingsText" Text="" Foreground="#405676" FontSize="11" TextWrapping="Wrap"/>
+      </Border>
+      <Grid ColumnDefinitions="*,150" ColumnSpacing="10">
+        <TextBlock Text="CPU 线程" Foreground="#46566E" VerticalAlignment="Center" TextWrapping="Wrap"/>
+        <NumericUpDown x:Name="ThreadsBox" AutomationProperties.Name="CPU 线程数" Grid.Column="1" Minimum="1" Maximum="32" Value="2" Increment="1" FormatString="0"
+                       ToolTip.Tip="引擎同时计算的 CPU 线程数。超过逻辑核心数通常更慢；给截图、界面和录屏留出算力。"/>
+      </Grid>
+      <TextBlock x:Name="ThreadBudgetHintText" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+      <Grid ColumnDefinitions="*,150" ColumnSpacing="10">
+        <TextBlock Text="置换表 MB" Foreground="#46566E" VerticalAlignment="Center" TextWrapping="Wrap"/>
+        <NumericUpDown x:Name="HashBox" AutomationProperties.Name="置换表大小，MB" Grid.Column="1" Minimum="16" Maximum="16384" Value="128" Increment="16" FormatString="0"
+                       ToolTip.Tip="保存已搜索局面的内存缓存，单位 MB。增加缓存不等于直接增加棋力；暂停后可复用。"/>
+      </Grid>
+      <Grid ColumnDefinitions="*,150" ColumnSpacing="10">
+        <TextBlock Text="分析候选变化数" Foreground="#46566E" VerticalAlignment="Center" TextWrapping="Wrap"/>
+        <NumericUpDown x:Name="AnalysisLinesBox" AutomationProperties.Name="分析候选变化数" Grid.Column="1" Minimum="1" Maximum="5" Value="3" Increment="1" FormatString="0"
+                       ToolTip.Tip="分析模式显示的候选方案数 MultiPV。越多，每个方案分到的搜索资源越少；20 级执棋只搜索最佳方案。"/>
+      </Grid>
+      <Grid ColumnDefinitions="*,150" ColumnSpacing="10">
+        <TextBlock Text="20 级思考秒数" Foreground="#46566E" VerticalAlignment="Center" TextWrapping="Wrap"/>
+        <NumericUpDown x:Name="ThinkBox" AutomationProperties.Name="20 级思考秒数" Grid.Column="1" Minimum="1" Maximum="120" Value="12" Increment="1" FormatString="0"
+                       ToolTip.Tip="每步搜索的时间上限。20 级默认不附加深度上限；分阶段时间开启后，执棋使用对应阶段的时间。"/>
+      </Grid>
+      <Border Background="#F7F9FD" CornerRadius="10" Padding="11">
+        <StackPanel Spacing="10">
+          <TextBlock Text="搜索深度 · 可选限制" Classes="sectionTitle"/>
+          <CheckBox x:Name="DepthLimitCheck" Content="20 级搜索增加深度上限" FontSize="12"/>
+          <Grid ColumnDefinitions="*,150" ColumnSpacing="10">
+            <TextBlock Text="最大深度" Foreground="#46566E" VerticalAlignment="Center" TextWrapping="Wrap"/>
+            <NumericUpDown x:Name="DepthBox" AutomationProperties.Name="搜索最大深度" Grid.Column="1" Minimum="1" Maximum="255" Value="30" Increment="1" FormatString="0"
+                           ToolTip.Tip="仅勾选上方开关后生效。一层对应一方的一步；达到时间或此深度中的任一上限就停止。"/>
+          </Grid>
+          <TextBlock Text="内置皮卡鱼主搜索内部最高 245 层；其他版本的内部上限由引擎决定。这里的 255 是客户端可设置的范围。通常保持关闭，按思考时间搜索即可。" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+        </StackPanel>
+      </Border>
+      <Border Background="#F7F9FD" CornerRadius="10" Padding="11">
+        <StackPanel Spacing="10">
+          <CheckBox x:Name="PhaseTimeCheck" Content="自定义分阶段搜索时间上限" FontSize="12"/>
+          <TextBlock Text="仅 20 级执棋生效，包括外部接管；分析仍用统一时间。阶段不代表计算难度，残局无需固定比中局更久。关闭后使用上方统一时间。"
+                     Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+          <StackPanel x:Name="PhaseTimeControls" Spacing="10">
+            <Grid ColumnDefinitions="*,150" ColumnSpacing="10">
+              <TextBlock Text="开局 · 最长秒 / 步" Foreground="#46566E" VerticalAlignment="Center" TextWrapping="Wrap"/>
+              <NumericUpDown x:Name="OpeningTimeBox" AutomationProperties.Name="开局最长思考秒数" Grid.Column="1" Minimum="0.2" Maximum="120" Value="0.8" Increment="0.2" FormatString="0.0"/>
+            </Grid>
+            <Grid ColumnDefinitions="*,150" ColumnSpacing="10">
+              <TextBlock Text="中局 · 最长秒 / 步" Foreground="#46566E" VerticalAlignment="Center" TextWrapping="Wrap"/>
+              <NumericUpDown x:Name="MiddleTimeBox" AutomationProperties.Name="中局最长思考秒数" Grid.Column="1" Minimum="0.2" Maximum="120" Value="5" Increment="1" FormatString="0.0"/>
+            </Grid>
+            <Grid ColumnDefinitions="*,150" ColumnSpacing="10">
+              <TextBlock Text="残局 · 最长秒 / 步" Foreground="#46566E" VerticalAlignment="Center" TextWrapping="Wrap"/>
+              <NumericUpDown x:Name="EndgameTimeBox" AutomationProperties.Name="残局最长思考秒数" Grid.Column="1" Minimum="0.2" Maximum="120" Value="5" Increment="1" FormatString="0.0"/>
+            </Grid>
+            <Grid ColumnDefinitions="*,150" ColumnSpacing="10">
+              <TextBlock Text="开局截止回合" Foreground="#46566E" VerticalAlignment="Center"/>
+              <NumericUpDown x:Name="OpeningRoundsBox" AutomationProperties.Name="开局截止回合" Grid.Column="1" Minimum="1" Maximum="40" Value="10" Increment="1" FormatString="0"/>
+            </Grid>
+            <Grid ColumnDefinitions="*,150" ColumnSpacing="10">
+              <TextBlock Text="残局子力值 ≤" Foreground="#46566E" VerticalAlignment="Center" TextWrapping="Wrap"/>
+              <NumericUpDown x:Name="EndgameAttackersBox" AutomationProperties.Name="残局子力阈值" Grid.Column="1" Minimum="1" Maximum="12" Value="6" Increment="1" FormatString="0"/>
+            </Grid>
+          </StackPanel>
+          <TextBlock x:Name="CurrentPhaseText" Foreground="#405676" FontSize="11" TextWrapping="Wrap"/>
+          <TextBlock Text="双方子力合计：每车 2、每马或炮 1，初始 16；达到阈值才使用残局预算，不按总子数或回合数强制判残局。开局须有标准或首回合起点且至少 28 子。时间是搜索上限，启动、识别和落子耗时另计。线程与置换表复用。"
+                     Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+        </StackPanel>
+      </Border>
+      </StackPanel>
+    </Grid>
+  </ScrollViewer>
+</views:WorkspaceView>

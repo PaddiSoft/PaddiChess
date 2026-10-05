@@ -1,0 +1,79 @@
+<views:WorkspaceView xmlns="https://github.com/avaloniaui"
+                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                     xmlns:local="using:PaddiXiangqi"
+                     xmlns:views="using:PaddiXiangqi.Views"
+                     xmlns:vm="using:PaddiXiangqi.ViewModels"
+                     x:Class="PaddiXiangqi.Views.EnginePluginsView" x:Name="WorkspaceRoot">
+  <Grid ColumnDefinitions="260,*" ColumnSpacing="22" Margin="16,12,16,16">
+    <Border Background="#F5F8FC" CornerRadius="12" Padding="14">
+      <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+        <TextBlock Text="已添加的引擎" FontWeight="SemiBold" Foreground="#35445B" FontSize="15"/>
+        <Border Grid.Row="1" Background="#EAF1FE" CornerRadius="9" Padding="10">
+          <TextBlock x:Name="DefaultEngineText" Text="默认引擎 · 内置皮卡鱼" Foreground="#315DA4"
+                     FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap"/>
+        </Border>
+        <ListBox x:Name="EnginePluginList" Grid.Row="2" Background="Transparent" BorderThickness="0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+        <StackPanel Grid.Row="3" Spacing="7">
+          <Button x:Name="EnginePluginAddButton" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.EnginePluginAdd}" Content="＋ 添加引擎程序" HorizontalAlignment="Stretch"/>
+          <Button x:Name="EnginePluginImportButton" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.EnginePluginImport}" Content="导入插件配置" HorizontalAlignment="Stretch"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+    <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" RowSpacing="16">
+      <StackPanel Spacing="5">
+        <TextBlock Text="版本与权重" Classes="heading"/>
+        <TextBlock Text="每个引擎独立保存程序和权重。设为默认后，用于对弈、分析与外部接管。"
+                   Classes="muted" FontSize="12" TextWrapping="Wrap"/>
+      </StackPanel>
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="12" Margin="0,0,8,8">
+          <TextBlock Text="插件名称" Foreground="#46566E" FontSize="12"/>
+          <TextBox x:Name="EnginePluginNameBox" PlaceholderText="例如：皮卡鱼稳定版"/>
+          <TextBlock Text="引擎程序" Foreground="#46566E" FontSize="12"/>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox x:Name="EnginePathBox" PlaceholderText="选择本机可运行的引擎" FontSize="12"/>
+            <Button x:Name="EngineBrowseButton" Grid.Column="1" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.EngineBrowse}" Content="浏览程序"/>
+          </Grid>
+          <TextBlock Text="NNUE 权重（可选）" Foreground="#46566E" FontSize="12"/>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox x:Name="EngineEvalBox" PlaceholderText="留空使用该引擎自身的默认权重" FontSize="12"/>
+            <Button x:Name="EngineEvalBrowseButton" Grid.Column="1" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.EngineEvalBrowse}" Content="浏览权重"/>
+          </Grid>
+          <Border Background="#F7F9FD" CornerRadius="10" Padding="12">
+            <TextBlock Text="请绑定对应版本的 NNUE。添加外部引擎时，客户端会检测其默认权重，不会套用内置引擎的权重。"
+                       Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+          </Border>
+          <Border Background="#F5F8FC" CornerRadius="10" Padding="12">
+            <StackPanel Spacing="8">
+              <TextBlock Text="版本与 UCI 能力" Classes="sectionTitle"/>
+              <TextBlock x:Name="EnginePluginInfoText" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
+          <Border Background="#EEF4FC" CornerRadius="12" Padding="16">
+            <StackPanel Spacing="12">
+              <TextBlock Text="规则与判和" Classes="heading" FontSize="15"/>
+              <TextBlock x:Name="EngineRuleStatusText" Classes="muted" FontSize="12" TextWrapping="Wrap"/>
+              <ItemsControl x:Name="EngineRuleOptionsPanel">
+                <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:EngineRuleOptionViewModel"><views:EngineRuleOptionView/></DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+      <Border Grid.Row="2" Background="#F7F9FD" CornerRadius="10" Padding="12">
+        <StackPanel Spacing="7">
+          <WrapPanel>
+            <Button x:Name="EnginePluginProbeButton" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.EnginePluginProbe}" Content="检测引擎" Margin="0,0,7,4"/>
+            <Button x:Name="EnginePluginDefaultButton" Classes="primary" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.EnginePluginDefault}" Content="设为默认" Margin="0,0,7,4"/>
+            <Button x:Name="EnginePluginSaveButton" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.EnginePluginSave}" Content="保存配置" Margin="0,0,7,4"/>
+            <Button x:Name="EnginePluginExportButton" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.EnginePluginExport}" Content="导出插件" Margin="0,0,7,4"/>
+            <Button x:Name="EnginePluginDeleteButton" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.EnginePluginDelete}" Content="移除" Margin="0,0,7,4"/>
+          </WrapPanel>
+          <TextBlock x:Name="EnginePluginStatusText" Text="选择插件查看配置。接管运行时请先停止，再切换默认引擎。"
+                     Foreground="#345476" FontSize="11" TextWrapping="Wrap"/>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </Grid>
+</views:WorkspaceView>

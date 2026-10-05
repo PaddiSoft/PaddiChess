@@ -1,0 +1,443 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:PaddiXiangqi"
+        xmlns:views="using:PaddiXiangqi.Views"
+        xmlns:vm="using:PaddiXiangqi.ViewModels"
+        x:Class="PaddiXiangqi.Views.MainWindow"
+        Title="Paddi象棋"
+        Icon="{x:Static local:BrandAssets.Icon}"
+        Width="1360" Height="880" MinWidth="1200" MinHeight="700"
+        Background="#F2F5FA" RequestedThemeVariant="Light" Classes="motion">
+
+
+  <Grid RowDefinitions="62,Auto,*">
+    <Image Grid.Row="2" Source="{x:Static local:BrandAssets.WorkspaceBackdrop}"
+           Stretch="UniformToFill" Opacity="0.28" IsHitTestVisible="False"/>
+    <Border Grid.Row="0" Background="White" BorderBrush="#E2E7ED" BorderThickness="0,0,0,1" Padding="17,0">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" VerticalAlignment="Center">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+          <Image Width="40" Height="40" Source="{x:Static local:BrandAssets.Logo}"
+                 Stretch="Uniform" VerticalAlignment="Center"/>
+          <StackPanel VerticalAlignment="Center" Spacing="0">
+            <TextBlock Text="Paddi象棋" FontWeight="Bold" FontSize="19" Foreground="#27384B"/>
+            <TextBlock Text="引擎插件 · AI 对弈" FontSize="9" Foreground="#9AA6B4" LetterSpacing="1.2"/>
+          </StackPanel>
+        </StackPanel>
+        <Border Grid.Column="1" Background="#F5F7FB" CornerRadius="11" Padding="3" HorizontalAlignment="Left">
+          <StackPanel Orientation="Horizontal" Spacing="3">
+            <Button x:Name="PlayWorkspaceButton" Classes="workspaceNav active" Click="PlayWorkspace_Click" Content="对弈"/>
+            <Button x:Name="ExternalWorkspaceButton" Classes="workspaceNav" Click="ExternalWorkspace_Click" Content="外部接管"/>
+            <Button x:Name="SettingsWorkspaceButton" Classes="workspaceNav" Click="SettingsWorkspace_Click" Content="棋盘与搜索"/>
+            <Button x:Name="ConfigurationWorkspaceButton" Classes="workspaceNav" Click="ConfigurationWorkspace_Click" Content="引擎插件"/>
+            <Button x:Name="ModelServicesWorkspaceButton" Classes="workspaceNav" Click="ModelServicesWorkspace_Click" Content="API 服务"/>
+          </StackPanel>
+        </Border>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <Button x:Name="NewButton" Classes="primary" Click="NewGame_Click" Content="＋ 新局" ToolTip.Tip="开始标准棋局"/>
+          <Button x:Name="NewRecordButton" Click="NewCustomRecord_Click" Content="＋ 自定义棋谱" ToolTip.Tip="先摆棋，再开始记录"/>
+          <Button x:Name="SoundButton" Click="Sound_Click" Content="♪ 音效开" ToolTip.Tip="开关走棋音效"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+    <Grid x:Name="WorkspaceContextRow" Grid.Row="1" ColumnDefinitions="*,Auto" Margin="19,9,19,0" ColumnSpacing="12">
+      <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+        <TextBlock x:Name="WorkspaceTitleText" Text="对弈" FontWeight="SemiBold" Foreground="#35465F" FontSize="14"/>
+        <TextBlock x:Name="WorkspaceHintText" Text="棋盘 · 棋谱 · 双方执棋" Classes="muted" FontSize="11" VerticalAlignment="Center"/>
+      </StackPanel>
+      <StackPanel x:Name="BoardActionsPanel" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+          <Button x:Name="UndoButton" Click="Undo_Click" Content="↶ 悔棋" ToolTip.Tip="回退一手"/>
+          <Button x:Name="RedoButton" Click="Redo_Click" Content="↷ 重走" ToolTip.Tip="前进一手"/>
+          <Border Width="1" Height="22" Background="#E3E9F1" Margin="3,0" VerticalAlignment="Center"/>
+          <Button x:Name="FlipButton" Click="Flip_Click" Content="⇅ 翻转" ToolTip.Tip="翻转棋盘视角"/>
+          <Button x:Name="HintButton" Click="Hint_Click" Content="✦ 提示" ToolTip.Tip="启用分析并查看推荐着法"/>
+          <Button x:Name="PauseButton" Click="Pause_Click" Content="⏸ 暂停" IsVisible="False"/>
+          <Button Click="SettingsWorkspace_Click" Content="⚙ 参数" ToolTip.Tip="棋盘、引擎与思考时间设置"/>
+      </StackPanel>
+    </Grid>
+
+    <Grid x:Name="WorkspaceGrid" Grid.Row="2" ColumnDefinitions="1.2*,5,240,5,1*" ColumnSpacing="6" Margin="13">
+      <Border x:Name="BoardPane" Grid.Column="0" Background="White" CornerRadius="16" BorderBrush="#E1E6ED" BorderThickness="1" Padding="12">
+        <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="8">
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="4,1,4,0">
+            <TextBlock x:Name="BoardHeadingText" Text="对局棋盘" Classes="heading" VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5">
+            <Button x:Name="BoardFlipShortcut" Click="Flip_Click" Content="翻转" Padding="7,4" FontSize="11" IsVisible="False"/>
+            <Button x:Name="CopyFenButton" Click="CopyFen_Click" Content="复制 FEN" Padding="7,4" FontSize="11"/>
+            <Border Background="#EEF4FE" CornerRadius="8" Padding="9,4">
+              <TextBlock x:Name="TurnBadge" Text="红方走棋" Foreground="#315DA4" FontWeight="SemiBold" FontSize="12"/>
+            </Border>
+            </StackPanel>
+          </Grid>
+          <Viewbox Grid.Row="1" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <local:BoardView x:Name="Board"/>
+          </Viewbox>
+          <Grid Grid.Row="2" RowDefinitions="Auto,Auto" RowSpacing="6" Margin="3,0">
+            <Grid x:Name="BoardNavigation" ColumnDefinitions="*,*,*,*" ColumnSpacing="6">
+              <Button x:Name="FirstMoveButton" Click="FirstMove_Click" Content="⏮ 开始" Padding="5,5" FontSize="11"/>
+              <Button x:Name="PrevMoveButton" Grid.Column="1" Click="PrevMove_Click" Content="◀ 上一步" Padding="5,5" FontSize="11"/>
+              <Button x:Name="NextMoveButton" Grid.Column="2" Click="NextMove_Click" Content="下一步 ▶" Padding="5,5" FontSize="11"/>
+              <Button x:Name="LastMoveButton" Grid.Column="3" Click="LastMove_Click" Content="末尾 ⏭" Padding="5,5" FontSize="11"/>
+            </Grid>
+            <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+              <StackPanel VerticalAlignment="Center" Spacing="1">
+                <TextBlock x:Name="BoardSubtitle" Text="点击棋子，再点目标位置" Foreground="#52647A" FontSize="11"/>
+                <TextBlock x:Name="BoardFooter" Text="白点标记上一手起点" Classes="muted" FontSize="10"/>
+              </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                <Button x:Name="ImportFenButton" Click="ImportFen_Click" Content="导入 FEN" Padding="8,5" FontSize="11"/>
+              </StackPanel>
+            </Grid>
+          </Grid>
+          <local:AdvantageChart x:Name="Chart" Grid.Row="3" Margin="1,0" Height="86"/>
+        </Grid>
+      </Border>
+
+      <GridSplitter x:Name="BoardPaneSplitter" Grid.Column="1" Width="5" HorizontalAlignment="Stretch"
+                    ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" Background="#DFE6EF"
+                    ToolTip.Tip="拖动调整棋盘与右侧面板的宽度"/>
+      <Border x:Name="RecordPane" Grid.Column="2" MinWidth="190" Background="White" CornerRadius="16" BorderBrush="#E1E6ED" BorderThickness="1" Padding="12">
+        <Grid x:Name="RecordSplitPanel" RowDefinitions="*,0,0,Auto">
+        <Grid x:Name="RecordContentPanel" RowDefinitions="Auto,*,Auto" RowSpacing="10">
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="2,1">
+            <TextBlock Text="棋谱" Classes="heading"/>
+            <TextBlock x:Name="MoveCountText" Grid.Column="1" Text="0 手" Classes="muted" FontSize="12" VerticalAlignment="Center"/>
+          </Grid>
+          <views:MoveHistoryView x:Name="MoveScroll" Grid.Row="1"/>
+          <Border x:Name="RecordEditorPanel" Grid.Row="2" Background="#F6F8FB" CornerRadius="10" Padding="9">
+              <StackPanel Spacing="7">
+                <TextBlock Text="棋谱与注释" Classes="sectionTitle" FontSize="12"/>
+                <TextBox x:Name="RecordTitleBox" PlaceholderText="棋谱名称" FontSize="12"/>
+                <TextBlock x:Name="AnnotationTargetText" Text="开始局面 · 注释" Foreground="#61728C" FontSize="11"/>
+                <TextBox x:Name="AnnotationBox" PlaceholderText="为当前着法添加注释" AcceptsReturn="True" TextWrapping="Wrap" Height="55" FontSize="12"/>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                  <Button Grid.Column="0" Click="SaveNote_Click" Content="保存注释" Padding="6,6" FontSize="11"/>
+                  <Button Grid.Column="1" Click="SaveRecord_Click" Content="保存棋谱" Padding="6,6" FontSize="11"/>
+                </Grid>
+                <Button Click="LoadRecord_Click" Content="导入自定义棋谱" Padding="6,6" FontSize="11"/>
+              </StackPanel>
+          </Border>
+          <Grid x:Name="ExternalRecordActions" Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="6" IsVisible="False">
+            <Button Click="SaveRecord_Click" Content="保存棋谱" Padding="6,5" FontSize="11"/>
+            <Button Grid.Column="1" Click="CopyFen_Click" Content="复制局面" Padding="6,5" FontSize="11"/>
+          </Grid>
+          <Border x:Name="SetupPanel" Grid.Row="1" Grid.RowSpan="2" Background="#F6F8FB"
+                  CornerRadius="10" Padding="9" IsVisible="False">
+            <ScrollViewer>
+              <StackPanel Spacing="8">
+                <TextBlock Text="摆棋编辑" FontWeight="Bold" Foreground="#26384C" FontSize="15"/>
+                <TextBlock Text="棋子栏可连续放置，满额变灰。棋盘上先点棋子选中，再点目标移动；目标有子时会替换。"
+                           Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                <TextBox x:Name="SetupTitleBox" PlaceholderText="给这份棋谱命名" FontSize="12"/>
+                <views:PiecePaletteView x:Name="SetupPalette"/>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="5">
+                  <Button x:Name="SetupMoveButton" Grid.Column="0" Click="SetupMoveTool_Click" Content="移动棋子" Padding="5,5" FontSize="11"/>
+                  <Button x:Name="SetupEraseButton" Grid.Column="1" Click="SetupEraseTool_Click" Content="橡皮擦" Padding="5,5" FontSize="11"/>
+                </Grid>
+                <TextBlock x:Name="SetupSelectedText" Text="当前工具：移动棋子" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                <Button x:Name="SetupUndoButton" Click="SetupUndo_Click" Content="撤销编辑" Padding="5,5" FontSize="11"/>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="5">
+                  <Button Grid.Column="0" Click="SetupStandard_Click" Content="标准布局" Padding="5,5" FontSize="11"/>
+                  <Button x:Name="SetupClearButton" Grid.Column="1" Click="SetupClear_Click" Content="清空棋盘" Padding="5,5" FontSize="11"/>
+                </Grid>
+                <TextBlock Text="先手" Foreground="#46566E" FontWeight="SemiBold" FontSize="12"/>
+                <ComboBox x:Name="SetupSideCombo" SelectedIndex="0">
+                  <ComboBoxItem Content="红方先走"/>
+                  <ComboBoxItem Content="黑方先走"/>
+                </ComboBox>
+                <TextBlock x:Name="SetupErrorText" Foreground="#B23A43" FontSize="11" TextWrapping="Wrap"/>
+                <Button Classes="primary" Click="SetupConfirm_Click" Content="确定局面，开始记录"/>
+                <Button Click="SetupCancel_Click" Content="取消摆棋"/>
+              </StackPanel>
+            </ScrollViewer>
+          </Border>
+        </Grid>
+        <GridSplitter x:Name="ExternalRecordAnalysisSplitter" Grid.Row="1" Height="5"
+                      HorizontalAlignment="Stretch" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext"
+                      Background="#E4EAF2" IsVisible="False" ToolTip.Tip="拖动调整棋谱与实时分析的高度"/>
+        <Border x:Name="ExternalAnalysisPane" Grid.Row="2" BorderBrush="#E4EAF2" BorderThickness="0,1,0,0"
+                IsVisible="False">
+          <ContentControl x:Name="ExternalAnalysisHost" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
+        </Border>
+        </Grid>
+      </Border>
+
+      <GridSplitter x:Name="DetailsPaneSplitter" Grid.Column="3" Width="5" HorizontalAlignment="Stretch"
+                    ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" Background="#DFE6EF"
+                    ToolTip.Tip="拖动调整棋谱与设置面板的宽度"/>
+      <Grid x:Name="DetailsPane" Grid.Column="4" RowDefinitions="Auto,Auto,*" RowSpacing="8" MinWidth="370">
+        <Border x:Name="LocalStatusCard" Grid.Row="0" Background="White" CornerRadius="16" BorderBrush="#E1E6ED" BorderThickness="1" Padding="11">
+          <StackPanel Spacing="6">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="对局状态" Classes="heading"/>
+              <Border Grid.Column="1" Background="#EAF6EF" CornerRadius="8" Padding="8,4">
+                <TextBlock x:Name="ModeBadge" Text="双方对战" Foreground="#2B7855" FontSize="11" FontWeight="SemiBold"/>
+              </Border>
+            </Grid>
+            <TextBlock x:Name="StatusText" Text="红方先行" Foreground="#536277" FontSize="12" TextWrapping="Wrap"/>
+            <TextBlock x:Name="ActiveEngineText" Text="当前引擎：内置皮卡鱼" Foreground="#66768A" FontSize="10"
+                       TextTrimming="CharacterEllipsis"/>
+            <Border x:Name="LocalControllerPanel" Background="#F5F7FA" CornerRadius="10" Padding="9,7"
+                    ToolTip.Tip="双方分别选择执棋方式；默认引擎和大模型均关闭时为玩家对战。模型和思考等级可先选好再启用。">
+              <StackPanel Spacing="7">
+                <Grid ColumnDefinitions="45,*,*" ColumnSpacing="6" RowDefinitions="Auto,Auto" RowSpacing="4">
+                  <TextBlock Text="红方" Foreground="#A13A3E" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                  <CheckBox x:Name="RedEngineCheck" Grid.Column="1" Content="默认引擎" FontSize="11" VerticalAlignment="Center"/>
+                  <CheckBox x:Name="RedLlmCheck" Grid.Column="2" Content="大模型" FontSize="11" VerticalAlignment="Center"/>
+                  <TextBlock Text="黑方" Grid.Row="1" Foreground="#26343D" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                  <CheckBox x:Name="BlackEngineCheck" Grid.Row="1" Grid.Column="1" Content="默认引擎" FontSize="11" VerticalAlignment="Center"/>
+                  <CheckBox x:Name="BlackLlmCheck" Grid.Row="1" Grid.Column="2" Content="大模型" FontSize="11" VerticalAlignment="Center"/>
+                </Grid>
+                <Grid x:Name="LocalModelPicker" ColumnDefinitions="45,*,92" ColumnSpacing="6" RowDefinitions="Auto,Auto" RowSpacing="5">
+                  <TextBlock Text="红模型" Foreground="#A13A3E" FontSize="10" VerticalAlignment="Center"/>
+                  <local:SafeComboBox x:Name="RedActiveModelList" Grid.Column="1" FontSize="11" MinHeight="30" Height="30"
+                                      PlaceholderText="先在 API 服务页启用模型" HorizontalAlignment="Stretch"/>
+                  <local:SafeComboBox x:Name="RedLlmReasoningBox" Grid.Column="2" SelectedIndex="0" FontSize="10" MinHeight="30" Height="30"
+                                      ToolTip.Tip="红方思考等级，由你选择；支持范围取决于模型">
+                    <ComboBoxItem Content="自动" Tag="auto"/>
+                    <ComboBoxItem Content="低思考" Tag="low"/>
+                    <ComboBoxItem Content="中思考" Tag="medium"/>
+                    <ComboBoxItem Content="高思考" Tag="high"/>
+                  </local:SafeComboBox>
+                  <TextBlock Text="黑模型" Grid.Row="1" Foreground="#26343D" FontSize="10" VerticalAlignment="Center"/>
+                  <local:SafeComboBox x:Name="BlackActiveModelList" Grid.Row="1" Grid.Column="1" FontSize="11" MinHeight="30" Height="30"
+                                      PlaceholderText="先在 API 服务页启用模型" HorizontalAlignment="Stretch"/>
+                  <local:SafeComboBox x:Name="BlackLlmReasoningBox" Grid.Row="1" Grid.Column="2" SelectedIndex="0" FontSize="10" MinHeight="30" Height="30"
+                                      ToolTip.Tip="黑方思考等级，由你选择；支持范围取决于模型">
+                    <ComboBoxItem Content="自动" Tag="auto"/>
+                    <ComboBoxItem Content="低思考" Tag="low"/>
+                    <ComboBoxItem Content="中思考" Tag="medium"/>
+                    <ComboBoxItem Content="高思考" Tag="high"/>
+                  </local:SafeComboBox>
+                </Grid>
+              </StackPanel>
+            </Border>
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+              <CheckBox x:Name="AnalysisModeCheck" Content="分析模式" FontSize="11" VerticalAlignment="Center"/>
+              <TextBlock x:Name="AiStatusText" Grid.Column="1" Text="大模型未接管棋局" Classes="muted" FontSize="10"
+                         TextWrapping="Wrap" TextAlignment="Right" VerticalAlignment="Center"/>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <Border x:Name="LlmThinkingPanel" Grid.Row="1" Background="#F9FBFF" CornerRadius="13"
+                BorderBrush="#CDDCF0" BorderThickness="1" Padding="11,9" IsVisible="False">
+          <Grid x:Name="ThinkingLayout" RowDefinitions="Auto,1,*" RowSpacing="6">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="✦ 大模型思考与棋谱记录" Foreground="#315DA4" FontWeight="SemiBold" FontSize="12"/>
+              <TextBlock x:Name="LlmThinkingStageText" Grid.Column="1" Text="等待执棋" Foreground="#71839D"
+                         FontSize="10" VerticalAlignment="Center"/>
+            </Grid>
+            <Border Grid.Row="1" Height="1" Background="#E4ECF7"/>
+            <ScrollViewer x:Name="ThinkingScroll" Grid.Row="2" MaxHeight="170" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+              <TextBlock x:Name="LlmThinkingText"
+                         Text="请求 · —&#10;模型可见摘要 · —&#10;候选落子 · —&#10;合法校验 · —&#10;最终着法 · —"
+                         Foreground="#42536B" FontSize="11" TextWrapping="Wrap"/>
+            </ScrollViewer>
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Background="White" CornerRadius="16" BorderBrush="#E1E6ED" BorderThickness="1">
+          <TabControl x:Name="MainTabs" Background="Transparent" Padding="8">
+            <TabControl.Template>
+              <ControlTemplate>
+                <Grid RowDefinitions="0,*">
+                  <!-- TabControl needs its item containers; page navigation is provided by the top buttons. -->
+                  <ItemsPresenter Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}"
+                                  Height="0" Opacity="0" IsHitTestVisible="False" KeyboardNavigation.TabNavigation="None"/>
+                  <ContentPresenter Name="PART_SelectedContentHost" Grid.Row="1" Margin="{TemplateBinding Padding}"
+                                    HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
+                </Grid>
+              </ControlTemplate>
+            </TabControl.Template>
+            <TabItem x:Name="AnalysisTab" Header="局面分析">
+              <ScrollViewer x:Name="AnalysisScroll">
+                <StackPanel Margin="11,12,11,15" Spacing="13">
+                  <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                    <TextBlock Text="局面分析" Classes="heading"/>
+                    <TextBlock x:Name="EngineStatusText" Grid.Column="1" Text="引擎待命" Classes="muted" FontSize="11" VerticalAlignment="Center"
+                               TextAlignment="Right" TextTrimming="CharacterEllipsis"/>
+                    <Button x:Name="AnalyzeButton" Grid.Column="2" Classes="primary" Click="Analyze_Click"
+                            Content="重新分析" FontSize="11" Padding="8,5"/>
+                  </Grid>
+                  <Border Background="#EEF4FC" CornerRadius="11" Padding="12">
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="局面评分" Classes="muted" FontSize="11"/>
+                        <TextBlock x:Name="ScoreText" Text="—" FontSize="24" FontWeight="Bold" Foreground="#315DA4"/>
+                      </StackPanel>
+                      <StackPanel Grid.Column="1" Spacing="2">
+                        <TextBlock Text="搜索深度" Classes="muted" FontSize="11" ToolTip.Tip="引擎实际报告的迭代深度，一层是一方走一步。当前皮卡鱼内部主搜索最高 245 层；杀棋剪枝可很快达到高名义深度，不代表穷举全部分支。"/>
+                        <TextBlock x:Name="DepthText" Text="—" FontSize="17" FontWeight="SemiBold" Foreground="#3F5069"/>
+                      </StackPanel>
+                      <StackPanel Grid.Row="1" Spacing="2">
+                        <TextBlock Text="搜索节点" Classes="muted" FontSize="11"/>
+                        <TextBlock x:Name="NodesText" Text="—" FontSize="13" Foreground="#3F5069"/>
+                      </StackPanel>
+                      <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
+                        <TextBlock Text="搜索速度 · 节点/秒" Classes="muted" FontSize="11"/>
+                        <TextBlock x:Name="NpsText" Text="—" FontSize="13" Foreground="#3F5069"/>
+                      </StackPanel>
+                      <TextBlock x:Name="WdlText" Grid.Row="2" Grid.ColumnSpan="2" Text="胜和负概率待分析"
+                                 Foreground="#52657D" FontSize="11"/>
+                    </Grid>
+                  </Border>
+                  <Border x:Name="TerminalAnalysisPanel" IsVisible="False" Background="#F5F8FD" CornerRadius="9" Padding="10">
+                    <StackPanel Spacing="7">
+                      <TextBlock x:Name="TerminalResultText" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                      <TextBlock x:Name="TerminalSearchText" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                    </StackPanel>
+                  </Border>
+                  <StackPanel x:Name="BestMovePanel" Spacing="5" IsVisible="False">
+                    <TextBlock Text="推荐着法" FontWeight="SemiBold" Foreground="#35445B" FontSize="12"/>
+                    <TextBlock x:Name="BestMoveText" Text="正在等待分析" Foreground="#315DA4" TextWrapping="Wrap" FontSize="15"/>
+                  </StackPanel>
+                  <StackPanel x:Name="PvPanel" Spacing="5" IsVisible="False">
+                    <TextBlock Text="主要变化" FontWeight="SemiBold" Foreground="#35445B" FontSize="12"/>
+                    <TextBlock x:Name="PvText" Text="—" Classes="muted" TextWrapping="Wrap" FontSize="11"/>
+                  </StackPanel>
+                  <StackPanel x:Name="VariationPanel" Spacing="5" IsVisible="False">
+                    <TextBlock Text="候选变化" FontWeight="SemiBold" Foreground="#35445B" FontSize="12"/>
+                    <TextBlock Text="点击候选变化，在棋盘预览路线" Classes="muted" FontSize="10" TextWrapping="Wrap"/>
+                    <ScrollViewer MaxHeight="230" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                      <StackPanel>
+                        <TextBlock x:Name="VariationText" Text="—" Classes="muted" TextWrapping="Wrap" FontSize="11"/>
+                        <ItemsControl x:Name="VariationList">
+                          <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:VariationViewModel"><views:VariationView/></DataTemplate></ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </ScrollViewer>
+                  </StackPanel>
+                  <TextBlock Text="普通对战仅显示评分。开启分析模式或引擎接管后，蓝箭头显示推荐着法，红箭头显示对方应手。"
+                             Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                </StackPanel>
+              </ScrollViewer>
+            </TabItem>
+            <TabItem x:Name="SettingsTab" Header="棋盘与搜索参数">
+              <views:SettingsView x:Name="SettingsPage" ActionRequested="WorkspaceActionRequested"/>
+            </TabItem>
+            <TabItem x:Name="ModelServicesTab" Header="API 服务与模型">
+              <views:ModelServicesView x:Name="ModelServicesPage" ActionRequested="WorkspaceActionRequested"/>
+            </TabItem>
+            <TabItem x:Name="ExternalTab" Header="同步与接管">
+              <Grid>
+                <Border x:Name="ExternalPermissionGate" Margin="12,18" Padding="24" CornerRadius="14" Background="#F5F8FD" VerticalAlignment="Top">
+                  <StackPanel Spacing="16">
+                    <TextBlock Text="先完成系统授权" Classes="heading"/>
+                    <TextBlock Text="接管需要读取目标棋盘并发送落子。两项权限就绪后，才能选择窗口和开始接管。" TextWrapping="Wrap" Foreground="#536277"/>
+                    <Border Background="White" Padding="14" CornerRadius="10">
+                      <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="5">
+                        <TextBlock Text="屏幕录制" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="ExternalScreenPermissionText" Grid.Row="1" Text="正在检查…" Classes="muted" FontSize="12"/>
+                        <Button x:Name="ExternalScreenPermissionButton" Grid.Column="1" Grid.RowSpan="2" Content="去授权" Tag="screen" Click="ExternalGrantPermission_Click"/>
+                      </Grid>
+                    </Border>
+                    <Border Background="White" Padding="14" CornerRadius="10">
+                      <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="5">
+                        <TextBlock Text="辅助功能" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="ExternalInputPermissionText" Grid.Row="1" Text="正在检查…" Classes="muted" FontSize="12"/>
+                        <Button x:Name="ExternalInputPermissionButton" Grid.Column="1" Grid.RowSpan="2" Content="去授权" Tag="input" Click="ExternalGrantPermission_Click"/>
+                      </Grid>
+                    </Border>
+                    <TextBlock x:Name="ExternalPermissionMessage" Text="检测只读取权限状态，不弹出系统授权窗口。" TextWrapping="Wrap" FontSize="12" Foreground="#536277"/>
+                    <Button x:Name="ExternalPermissionRetryButton" Content="我已授权，重新检测" Click="ExternalCheckPermissions_Click"/>
+                    <TextBlock Text="授权后返回会自动检测，保留已选窗口、棋盘标定和棋谱。" TextWrapping="Wrap" Classes="muted" FontSize="11"/>
+                  </StackPanel>
+                </Border>
+              <Grid x:Name="ExternalWorkspacePanel" RowDefinitions="Auto,*,Auto" RowSpacing="12" Margin="10" IsVisible="False">
+                <StackPanel x:Name="ExternalLiveControls" Spacing="8">
+                  <Grid x:Name="ExternalOperationPanel" ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="7" RowSpacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                      <TextBlock Text="接管控制" Classes="heading" FontSize="16" VerticalAlignment="Center"/>
+                      <Border x:Name="ExternalConnectionBadge" Classes="sessionBadge" VerticalAlignment="Center">
+                        <TextBlock x:Name="ExternalConnectionText" Text="未连接" FontSize="11" FontWeight="SemiBold"/>
+                      </Border>
+                      <Button x:Name="ExternalHistoryButton" Content="接管记录" Click="ExternalHistory_Click" ToolTip.Tip="查看自动保存的棋谱、识别结果与落子事件" Padding="7,5" FontSize="11"/>
+                    </StackPanel>
+                    <Button x:Name="ExternalStopButton" Grid.Column="1" Content="停止 · Esc" Click="ExternalStop_Click" Padding="9,7" FontSize="11" IsEnabled="False"/>
+                    <Button x:Name="ExternalDisconnectButton" Grid.Column="2" Content="断开" ToolTip.Tip="断开连接，返回本地棋局" Click="ExternalDisconnect_Click" Padding="8,7" FontSize="11" IsVisible="False"/>
+                    <Grid Grid.Row="1" Grid.ColumnSpan="3" ColumnDefinitions="*,34,Auto,Auto,Auto" ColumnSpacing="6">
+                      <local:SafeComboBox x:Name="ExternalWindowBox" HorizontalAlignment="Stretch" MaxDropDownHeight="240" PlaceholderText="选择棋盘所在窗口" FontSize="12" MinHeight="32" Height="32"/>
+                      <Button x:Name="ExternalRefreshButton" Grid.Column="1" Content="↻" ToolTip.Tip="刷新窗口" Click="ExternalRefresh_Click" Padding="5" FontSize="16"/>
+                      <Button x:Name="ExternalConnectButton" Grid.Column="2" Classes="primary" Content="① 连接并同步" Click="ExternalConnect_Click" Padding="9,5" FontSize="12" Height="34" IsEnabled="False"/>
+                      <TextBlock Grid.Column="3" Text="→" Foreground="#8A98AC" VerticalAlignment="Center"/>
+                      <Button x:Name="ExternalStartButton" Grid.Column="4" Content="② 开始接管" Click="ExternalStart_Click" Padding="9,5" FontSize="12" Height="34" IsEnabled="False"/>
+                    </Grid>
+                    <TextBlock x:Name="ExternalFlowHint" Grid.Row="2" Grid.ColumnSpan="2" Text="先选择棋盘窗口，再点击「① 连接并同步」。" TextWrapping="Wrap" FontSize="11" Foreground="#536B8A" VerticalAlignment="Center"/>
+                    <Button x:Name="ExternalStandardOpeningButton" Grid.Row="2" Grid.Column="2" Content="标准开局" Click="ExternalStandardOpening_Click" ToolTip.Tip="暂停接管，按当前朝向生成 32 子并打开摆棋" Padding="7,5" FontSize="11"/>
+                  </Grid>
+                  <Border x:Name="ExternalOptionsCard" Background="#F7F9FC" BorderBrush="#E8EDF4" BorderThickness="1" CornerRadius="12" Padding="10,8">
+                  <Grid x:Name="ExternalOptionsGrid" ColumnDefinitions="*,*" RowDefinitions="32,32,32,32" ColumnSpacing="14" RowSpacing="6">
+                    <Grid x:Name="ExternalConfigPanel" Grid.Column="1" ColumnDefinitions="32,72,*" ColumnSpacing="5">
+                        <TextBlock Text="接管" FontSize="11" VerticalAlignment="Center"/>
+                        <local:SafeComboBox x:Name="ExternalSideBox" Grid.Column="1" SelectedIndex="0" FontSize="11" MinHeight="30" Height="30" HorizontalAlignment="Stretch"><ComboBoxItem Content="红方"/><ComboBoxItem Content="黑方"/></local:SafeComboBox>
+                        <CheckBox x:Name="ExternalAutoSideCheck" Grid.Column="2" Content="默认下方" ToolTip.Tip="自动接管棋盘下方" FontSize="11" IsChecked="True" VerticalAlignment="Center"/>
+                    </Grid>
+                      <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="32,126,*" ColumnSpacing="5" IsEnabled="{Binding IsEnabled, ElementName=ExternalConfigPanel}">
+                        <TextBlock Text="执棋" FontSize="11" VerticalAlignment="Center"/>
+                        <local:SafeComboBox x:Name="ExternalControllerBox" Grid.Column="1" SelectedIndex="0" FontSize="11" MinHeight="30" Height="30" HorizontalAlignment="Stretch"><ComboBoxItem Content="默认引擎"/><ComboBoxItem Content="大模型"/></local:SafeComboBox>
+                        <Grid x:Name="ExternalModelPanel" Grid.Column="2" ColumnDefinitions="*,90" ColumnSpacing="6" IsVisible="False">
+                          <local:SafeComboBox x:Name="ExternalModelBox" MinHeight="30" Height="30" HorizontalAlignment="Stretch" PlaceholderText="在 API 服务启用模型" FontSize="11" ToolTip.Tip="接管模型"/>
+                          <local:SafeComboBox x:Name="ExternalEffortBox" Grid.Column="1" MinHeight="30" Height="30" SelectedIndex="0" HorizontalAlignment="Stretch" FontSize="11" ToolTip.Tip="模型思考等级，由你选择"><ComboBoxItem Content="自动"/><ComboBoxItem Content="低思考"/><ComboBoxItem Content="中思考"/><ComboBoxItem Content="高思考"/></local:SafeComboBox>
+                        </Grid>
+                      </Grid>
+                      <Grid Grid.Row="2" ColumnDefinitions="32,*" ColumnSpacing="5" IsEnabled="{Binding IsEnabled, ElementName=ExternalConfigPanel}">
+                        <TextBlock Text="输入" FontSize="11" VerticalAlignment="Center"/>
+                        <local:SafeComboBox x:Name="ExternalDeliveryBox" Grid.Column="1" SelectedIndex="0" MinHeight="30" Height="30" FontSize="11" HorizontalAlignment="Stretch"><ComboBoxItem Content="系统鼠标 · 兼容优先"/><ComboBoxItem Content="窗口事件 · 后台"/><ComboBoxItem Content="窗口事件 · 自动聚焦"/></local:SafeComboBox>
+                      </Grid>
+                      <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="32,*,86" ColumnSpacing="5">
+                        <TextBlock Text="同步" FontSize="11" VerticalAlignment="Center"/>
+                        <local:SafeComboBox x:Name="ExternalSpeedBox" Grid.Column="1" SelectedIndex="0" MinHeight="30" Height="30" HorizontalAlignment="Stretch" FontSize="11" IsEnabled="{Binding IsEnabled, ElementName=ExternalConfigPanel}" ToolTip.Tip="观察间隔；落子仍需稳定画面确认"><ComboBoxItem Content="实时 · 33 ms"/><ComboBoxItem Content="均衡 · 80 ms"/><ComboBoxItem Content="省电 · 250 ms"/></local:SafeComboBox>
+                        <local:SafeComboBox x:Name="ExternalScoreModeBox" Grid.Column="2" SelectedIndex="0" MinHeight="30" Height="30" FontSize="11" HorizontalAlignment="Stretch" ToolTip.Tip="自动复用执棋评分，或轻量补全双方评分"><ComboBoxItem Content="自动评分"/><ComboBoxItem Content="双方评分"/><ComboBoxItem Content="不评分"/></local:SafeComboBox>
+                      </Grid>
+                      <Grid Grid.Row="3" ColumnDefinitions="*,60" ColumnSpacing="5">
+                        <Grid ColumnDefinitions="32,*,50" ColumnSpacing="5" IsEnabled="{Binding IsEnabled, ElementName=ExternalConfigPanel}">
+                        <TextBlock Text="朝向" FontSize="11" VerticalAlignment="Center"/>
+                        <local:SafeComboBox x:Name="ExternalOrientationBox" Grid.Column="1" SelectedIndex="0" MinHeight="30" Height="30" FontSize="11" HorizontalAlignment="Stretch"><ComboBoxItem Content="黑上红下"/><ComboBoxItem Content="红上黑下"/></local:SafeComboBox>
+                        <Button x:Name="ExternalCalibrateButton" Grid.Column="2" Content="定位" ToolTip.Tip="重新定位并同步棋盘" Click="ExternalCalibrate_Click" Padding="5" FontSize="11"/>
+                        </Grid>
+                        <CheckBox x:Name="ExternalAnalysisCheck" Grid.Column="1" Content="路线" ToolTip.Tip="分析模式：显示推荐着法与应手路线" FontSize="11" VerticalAlignment="Center"/>
+                      </Grid>
+                      <Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="32,*,74" ColumnSpacing="5">
+                        <Grid Grid.ColumnSpan="2" ColumnDefinitions="32,*" ColumnSpacing="5" IsEnabled="{Binding IsEnabled, ElementName=ExternalConfigPanel}">
+                        <TextBlock Text="落子" FontSize="11" VerticalAlignment="Center"/>
+                        <local:SafeComboBox x:Name="ExternalInputBox" Grid.Column="1" SelectedIndex="0" MinHeight="30" Height="30" FontSize="11" HorizontalAlignment="Stretch"><ComboBoxItem Content="两次点击"/><ComboBoxItem Content="拖动棋子"/></local:SafeComboBox>
+                        </Grid>
+                        <Button x:Name="ExternalResyncButton" Grid.Column="2" Content="重新同步" ToolTip.Tip="重新同步当前局面" Click="ExternalResync_Click" IsVisible="False" Padding="5" FontSize="11"/>
+                      </Grid>
+                    <Grid x:Name="ExternalTurnPanel" ColumnDefinitions="32,72,*" ColumnSpacing="5">
+                      <TextBlock Text="轮到" FontSize="11" VerticalAlignment="Center"/>
+                      <local:SafeComboBox x:Name="ExternalTurnBox" Grid.Column="1" SelectedIndex="0" PlaceholderText="待识别" MinHeight="30" Height="30" FontSize="11" HorizontalAlignment="Stretch"><ComboBoxItem Content="红方"/><ComboBoxItem Content="黑方"/></local:SafeComboBox>
+                      <CheckBox x:Name="ExternalAutoTurnCheck" Grid.Column="2" Content="自动判断" IsChecked="True" MinWidth="82" FontSize="11" VerticalAlignment="Center"/>
+                    </Grid>
+                  </Grid>
+                  </Border>
+                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                    <TextBlock x:Name="ExternalModelText" TextTrimming="CharacterEllipsis" FontSize="10" Foreground="#315DA4"/>
+                    <TextBlock x:Name="ExternalMetricsText" Grid.Column="2" Text="截图 — · 识别 — · 0 手" FontSize="10" Foreground="#718096" VerticalAlignment="Center"/>
+                  </Grid>
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                    <Border Background="#F0F5FD" BorderBrush="#A9C2EB" BorderThickness="3,0,0,0" CornerRadius="6" Padding="9,7">
+                      <ScrollViewer MaxHeight="32" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                        <TextBlock x:Name="ExternalStatusText" Text="连接后持续同步并准备着法；开始接管后才发送落子。" TextWrapping="Wrap" FontSize="11" Foreground="#345476"/>
+                      </ScrollViewer>
+                    </Border>
+                    <StackPanel x:Name="ExternalTurnOverridePanel" Grid.Column="1" IsVisible="False" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                      <Button Content="轮到红方" Tag="red" Click="ExternalChooseTurn_Click" FontSize="10" Padding="5,4"/>
+                      <Button Content="轮到黑方" Tag="black" Click="ExternalChooseTurn_Click" FontSize="10" Padding="5,4"/>
+                    </StackPanel>
+                  </Grid>
+                </StackPanel>
+                <ContentControl x:Name="ExternalReviewHost" Grid.Row="1" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
+                <ContentControl x:Name="ExternalThinkingHost" Grid.Row="2" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" IsVisible="False"/>
+              </Grid>
+              </Grid>
+            </TabItem>
+            <TabItem Header="引擎插件" x:Name="EnginePluginsTab">
+              <views:EnginePluginsView x:Name="EnginePluginsPage" ActionRequested="WorkspaceActionRequested"/>
+            </TabItem>
+          </TabControl>
+        </Border>
+      </Grid>
+    </Grid>
+  </Grid>
+</Window>

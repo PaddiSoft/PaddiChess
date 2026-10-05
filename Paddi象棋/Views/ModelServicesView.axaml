@@ -1,0 +1,90 @@
+<views:WorkspaceView xmlns="https://github.com/avaloniaui"
+                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                     xmlns:local="using:PaddiXiangqi"
+                     xmlns:views="using:PaddiXiangqi.Views"
+                     xmlns:vm="using:PaddiXiangqi.ViewModels"
+                     x:Class="PaddiXiangqi.Views.ModelServicesView" x:Name="WorkspaceRoot" x:DataType="vm:ModelCatalogViewModel">
+  <ScrollViewer x:Name="ModelServicesScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="18" ColumnDefinitions="380,*" ColumnSpacing="22" Margin="16,12,16,18">
+      <Grid Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <StackPanel Spacing="5">
+          <TextBlock Text="API 服务与模型" Classes="heading"/>
+          <TextBlock Text="配置服务，获取模型列表，再勾选用于对局的模型。红黑双方可以使用不同的服务、模型和思考等级。"
+                     Classes="muted" FontSize="12" TextWrapping="Wrap"/>
+        </StackPanel>
+        <Button Grid.Column="1" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.PlayWorkspace}" Content="返回对弈选择选手 →" VerticalAlignment="Center"/>
+      </Grid>
+      <Border Grid.Row="1" Background="#F5F8FC" CornerRadius="12" Padding="16" VerticalAlignment="Top">
+        <StackPanel Spacing="11">
+          <TextBlock Text="服务连接" FontWeight="SemiBold" Foreground="#35445B" FontSize="15"/>
+          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+            <local:SafeComboBox x:Name="LlmProfileList" HorizontalAlignment="Stretch" PlaceholderText="选择 API 服务" FontSize="12"/>
+            <Button x:Name="LlmProfileAddButton" Grid.Column="1" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.LlmProfileAdd}" Content="＋ 添加" Padding="8,6"/>
+            <Button x:Name="LlmProfileDeleteButton" Grid.Column="2" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.LlmProfileDelete}" Content="删除" Padding="8,6"/>
+          </Grid>
+          <TextBlock Text="服务名称" Foreground="#46566E" FontSize="11"/>
+          <TextBox x:Name="LlmProfileNameBox" PlaceholderText="例如 Paddi AI" FontSize="12"/>
+          <TextBlock Text="API 地址" Foreground="#46566E" FontSize="11"/>
+          <TextBox x:Name="LlmProfileBaseUrlBox" PlaceholderText="https://api.example.com/v1" FontSize="12"/>
+          <TextBlock Text="API Key" Foreground="#46566E" FontSize="11"/>
+          <TextBox x:Name="LlmProfileApiKeyBox" PasswordChar="●" PlaceholderText="仅本次运行保存" FontSize="12"/>
+          <Button x:Name="LlmProfileFetchButton" Classes="primary" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.LlmProfileFetch}" Content="获取模型列表"/>
+          <TextBlock x:Name="LlmProfileStatusText" Text="填入地址和 Key 后会自动尝试获取模型。"
+                     Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+        </StackPanel>
+      </Border>
+      <Grid Grid.Row="1" Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="10">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+    <TextBlock Text="可用模型" FontWeight="SemiBold" Foreground="#35445B" FontSize="15"/>
+    <TextBlock Grid.Column="1" Text="{Binding Summary}" Classes="muted" FontSize="11" VerticalAlignment="Center"/>
+  </Grid>
+        <TextBlock Grid.Row="1" Text="勾选后，模型会出现在对弈页的红黑选手选择中，也可用于外部接管。"
+                   Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+        <TextBox x:Name="LlmModelFilterBox" Grid.Row="2" Text="{Binding Filter, Mode=TwoWay}" PlaceholderText="搜索模型 ID" FontSize="12"/>
+        <Border Grid.Row="3" Background="#FFFFFF" CornerRadius="10" BorderBrush="#E1E6ED" BorderThickness="1" Padding="10" MinHeight="220">
+          <Grid>
+            <TextBlock x:Name="LlmModelsEmptyText" Text="{Binding EmptyText}" IsVisible="{Binding IsEmpty}" FontSize="11" Classes="muted"/>
+            <ListBox x:Name="LlmProfileModelsPanel" ItemsSource="{Binding Items}" MaxHeight="310" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="Transparent" BorderThickness="0">
+              <ListBox.ItemTemplate><DataTemplate x:DataType="vm:ModelSelectionViewModel">
+                <CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}" FontSize="12" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ToolTip.Tip="{Binding Name}">
+    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+  </CheckBox>
+              </DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+        </Border>
+        <Grid Grid.Row="4" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <TextBox x:Name="LlmManualModelBox" PlaceholderText="列表缺少模型？手动输入 ID" FontSize="12"/>
+          <Button x:Name="LlmManualAddButton" Grid.Column="1" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.LlmManualAdd}" Content="添加并启用"/>
+        </Grid>
+      </Grid>
+      <Border Grid.Row="2" Grid.ColumnSpan="2" Background="#F7F9FD" CornerRadius="12" Padding="14">
+        <StackPanel Spacing="12">
+          <StackPanel Spacing="5">
+            <TextBlock Text="对局模型测试" FontWeight="SemiBold" Foreground="#35445B" FontSize="15"/>
+            <TextBlock Text="先返回对弈页选择每方模型与思考等级，再在此测试连接。外部接管也可直接在接管页选择。"
+                       Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+            <TextBlock Text="服务名称、地址和模型列表保存在本机。密钥只存于本次运行的内存。思考等级由你选择；接口拒绝时会提示。"
+                       Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+          </StackPanel>
+          <Grid x:Name="LlmSideTestsPanel" ColumnDefinitions="*,*" ColumnSpacing="12">
+            <Border Background="#FFF6F5" CornerRadius="10" Padding="12">
+              <StackPanel Spacing="7">
+                <TextBlock Text="红方模型" Foreground="#A13A3E" FontWeight="SemiBold" FontSize="12"/>
+                <Button x:Name="RedLlmTestButton" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.RedLlmTest}" Content="测试红方当前模型"/>
+                <TextBlock x:Name="RedLlmConfigStatusText" Text="尚未测试。" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Background="#F0F4F9" CornerRadius="10" Padding="12">
+              <StackPanel Spacing="7">
+                <TextBlock Text="黑方模型" Foreground="#26343D" FontWeight="SemiBold" FontSize="12"/>
+                <Button x:Name="BlackLlmTestButton" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.BlackLlmTest}" Content="测试黑方当前模型"/>
+                <TextBlock x:Name="BlackLlmConfigStatusText" Text="尚未测试。" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+              </StackPanel>
+            </Border>
+          </Grid>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </ScrollViewer>
+</views:WorkspaceView>

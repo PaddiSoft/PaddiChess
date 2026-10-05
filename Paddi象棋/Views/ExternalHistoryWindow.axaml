@@ -1,0 +1,54 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:PaddiXiangqi"
+        x:Class="PaddiXiangqi.Views.ExternalHistoryWindow" Title="接管记录" Width="1100" Height="720"
+        MinWidth="1000" MinHeight="640" WindowStartupLocation="CenterOwner" RequestedThemeVariant="Light" Background="#F5F7FB">
+  <Grid Margin="18" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+    <TextBlock Text="接管记录" Classes="heading"/>
+    <TextBlock x:Name="HistoryHint" Grid.Row="1" Text="每次连接自动保存到本机；断开、重新同步后仍可查看。选择事件可核对程序当时采用的局面与着法。"
+               TextWrapping="Wrap" Foreground="#536277" FontSize="12"/>
+    <Grid Grid.Row="2" ColumnDefinitions="210,*,420" ColumnSpacing="12">
+      <Grid RowDefinitions="Auto,*" RowSpacing="6">
+        <TextBlock Text="接管会话" FontWeight="SemiBold" Foreground="#35465F"/>
+        <ListBox x:Name="SessionsList" Grid.Row="1" SelectionChanged="Session_Changed" Background="White" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemTemplate><DataTemplate x:CompileBindings="False"><TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12"/></DataTemplate></ListBox.ItemTemplate>
+        </ListBox>
+      </Grid>
+      <Grid Grid.Column="1" RowDefinitions="Auto,*,1.15*" RowSpacing="6">
+        <TextBlock Text="识别与落子事件" FontWeight="SemiBold" Foreground="#35465F"/>
+        <ListBox x:Name="EventsList" Grid.Row="1" SelectionChanged="Event_Changed" Background="White" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemTemplate><DataTemplate x:CompileBindings="False"><TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12"/></DataTemplate></ListBox.ItemTemplate>
+        </ListBox>
+        <TextBox x:Name="EventDetails" Grid.Row="2" IsReadOnly="True" AcceptsReturn="True"
+                 TextWrapping="Wrap" FontSize="12" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+      </Grid>
+      <Border Grid.Column="2" Background="White" BorderBrush="#E1E6ED" BorderThickness="1" CornerRadius="12" Padding="10">
+        <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="6">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="事件棋盘" FontWeight="SemiBold" Foreground="#35465F" VerticalAlignment="Center"/>
+            <Button x:Name="PreviewFlipButton" Grid.Column="1" Content="⇅ 翻转" Click="PreviewFlip_Click" FontSize="11" Padding="7,5" IsEnabled="False"/>
+          </Grid>
+          <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="4">
+            <Button x:Name="ProgramPositionButton" Classes="workspaceNav" Content="程序局面" Tag="current" Click="PreviewSource_Click" Padding="6,6" FontSize="12" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" IsEnabled="False"/>
+            <Button x:Name="BeforePositionButton" Grid.Column="1" Classes="workspaceNav" Content="变化前" Tag="before" Click="PreviewSource_Click" Padding="6,6" FontSize="12" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" IsEnabled="False"/>
+            <Button x:Name="RecognizedPositionButton" Grid.Column="2" Classes="workspaceNav" Content="图像识别" Tag="observed" Click="PreviewSource_Click" Padding="6,6" FontSize="12" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" IsEnabled="False"/>
+          </Grid>
+          <Grid Grid.Row="2">
+            <Viewbox Stretch="Uniform">
+              <local:BoardView x:Name="EventBoard" IsHitTestVisible="False" Focusable="False" AnimationDurationMs="0"/>
+            </Viewbox>
+            <TextBlock x:Name="PreviewEmptyText" Text="选择事件查看当时的棋盘" TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="340" Foreground="#65748A" Background="White" Padding="10"/>
+          </Grid>
+          <TextBlock x:Name="PreviewCaption" Grid.Row="3" Text="仅查看记录中的局面" Foreground="#536277" FontSize="11" TextWrapping="Wrap"/>
+        </Grid>
+      </Border>
+    </Grid>
+    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+      <TextBlock x:Name="HistoryStatus" FontSize="11" Foreground="#536277" TextWrapping="Wrap" VerticalAlignment="Center"/>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+        <Button Content="刷新" Click="Refresh_Click"/>
+        <Button Content="关闭" IsCancel="True" Click="Close_Click"/>
+        <Button x:Name="ReplayButton" Content="加载棋谱复盘" Classes="primary" IsEnabled="False" Click="Replay_Click"/>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>

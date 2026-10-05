@@ -1,0 +1,32 @@
+**/bin/
+**/obj/
+.build/
+dist/
+.DS_Store
+*.user
+*.suo
+TestResults/
+**/TestResults/
+*.trx
+*.coverage
+*.coveragexml
+__pycache__/
+*.py[cod]
+# Local evidence includes captured desktops, machine paths, logs and toolchains.
+/artifacts/
+# Credentials, signing material and developer-only settings are never source assets.
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+*.key
+*.pem
+*.mobileprovision
+*.local.json
+/.paddi/
+*.app/
+
+# Superseded local engine archive; the current engine is versioned separately.
+/Pikafish.2026-09-06/
+/Pikafish.2026-09-25/Pikafish-Android-arm64-universal

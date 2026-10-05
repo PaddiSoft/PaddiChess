@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PaddiXiangqi.ViewModels" x:Class="PaddiXiangqi.Views.VariationView" x:DataType="vm:VariationViewModel">
+  <UserControl.Styles>
+    <Style Selector="Button.current"><Setter Property="Background" Value="#EAF1FF"/><Setter Property="BorderBrush" Value="#AFC8F4"/></Style>
+  </UserControl.Styles>
+  <Button Command="{Binding Select}" Classes.current="{Binding IsSelected}" AutomationProperties.Name="{Binding AccessibleName}"
+          Padding="9,7" Margin="0,0,0,5" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+    <StackPanel Spacing="3">
+      <TextBlock Text="{Binding Header}" FontSize="12" FontWeight="SemiBold" Foreground="#315DA4"/>
+      <TextBlock Text="{Binding Moves}" FontSize="11" TextWrapping="Wrap" Foreground="#405676"/>
+    </StackPanel>
+  </Button>
+</UserControl>
