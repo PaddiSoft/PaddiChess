@@ -26,8 +26,8 @@
 
 | 平台 | 发布包／使用方式 | 当前范围 |
 | --- | --- | --- |
-| macOS Apple Silicon | `Paddi象棋-macOS-AppleSilicon.zip` → `Paddi象棋.app` | 本地对弈、分析、外部接管 |
-| Windows x64 | `Paddi象棋-Windows-x64.zip` → `Paddi象棋.exe` | 本地对弈、分析；外部输入和捕获兼容性需在目标机器验证 |
+| macOS Apple Silicon | `PaddiChess-macOS-AppleSilicon.zip` → `Paddi象棋.app` | 本地对弈、分析、外部接管 |
+| Windows x64 | `PaddiChess-Windows-x64.zip` → `Paddi象棋.exe` | 本地对弈、分析；外部输入和捕获兼容性需在目标机器验证 |
 | macOS Intel | 仓库提供 `osx-x64` 构建目标 | 成品包以该次 Release 附件为准 |
 | Linux x64 | 仓库提供 `linux-x64` 构建目标 | 本地对弈客户端；尚未实现外部窗口接管 |
 

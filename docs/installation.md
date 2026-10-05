@@ -8,8 +8,8 @@
 
 | 系统 | 包名 | 启动入口 |
 | --- | --- | --- |
-| macOS Apple Silicon | `Paddi象棋-macOS-AppleSilicon.zip` | `Paddi象棋.app` |
-| Windows x64 | `Paddi象棋-Windows-x64.zip` | `Paddi象棋.exe` |
+| macOS Apple Silicon | `PaddiChess-macOS-AppleSilicon.zip` | `Paddi象棋.app` |
+| Windows x64 | `PaddiChess-Windows-x64.zip` | `Paddi象棋.exe` |
 | macOS Intel | 若该版本提供 `Paddi象棋-macOS-Intel.zip` | `Paddi象棋-Intel.app` |
 | Linux x64 | 若该版本提供 `Paddi象棋-Linux-x64.tar.gz` | `Paddi象棋` |
 
