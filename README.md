@@ -22,8 +22,6 @@
 
 ## 下载与安装
 
-**当前发布状态：** 本地安装包已完成构建与验证，GitHub 公开发布暂缓。用户提供的 Pikafish 2026-09-25 主引擎尚未落实准确对应源码；在确认之前，不公开分发包含该引擎的仓库资源或安装包。下述下载和克隆步骤适用于正式发布之后。
-
 从 [GitHub Releases](https://github.com/PaddiSoft/PaddiChess/releases) 下载与你的系统匹配的包，完整解压后运行。发布包自带 .NET 运行时、引擎、配套 NNUE 和离线 OCR 资源，无须另外安装 .NET。
 
 | 平台 | 发布包／使用方式 | 当前范围 |
@@ -92,7 +90,7 @@ dotnet run --project Paddi象棋/Paddi象棋.csproj --configuration Release --no
 
 Paddi象棋应用代码采用 [AGPL-3.0](LICENSE)。第三方引擎、权重、OCR 模型和其他组件保留各自许可与来源说明；项目许可证不替代这些许可。随包 NNUE 有独立使用限制，包括未经允许不得用于商业用途，不能按本项目 AGPL 许可理解其使用范围。
 
-- Pikafish：[随包引擎与 NNUE 来源](Paddi象棋/Packaging/Engine-README.md)、[NNUE 原许可](Pikafish.2026-09-25/NNUE权重协议（使用视为同意本协议）_NNUE%20License.txt)。
+- Pikafish：[上游项目与源码入口](https://github.com/official-pikafish/Pikafish)、[随包引擎与 NNUE 来源](Paddi象棋/Packaging/Engine-README.md)、[NNUE 原许可](Pikafish.2026-09-25/NNUE权重协议（使用视为同意本协议）_NNUE%20License.txt)。内置版本来自项目中的 `Pikafish.2026-09-25` 原始发行包，保留其许可和作者文件；该二进制与上游具体源码提交的对应关系尚未独立核验。
 - PaddiRules：[0906 原生规则组件来源](Paddi象棋/Native/PikafishRules/SOURCE.md)，GPL 源码随包提供；这份源码仅对应规则组件，不是 0925 主引擎的完整对应源码。
 - PaddleOCR / RapidOCR：[离线模型来源](Paddi象棋/Assets/Ocr/SOURCE.md)与随包 Apache-2.0 声明。
 - Avalonia、SkiaSharp、ONNX Runtime 及其他依赖：版本由项目文件与锁文件固定。
