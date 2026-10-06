@@ -4,7 +4,7 @@
     <PackageId>PaddiXiangqi.External</PackageId>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../Core/Paddi象棋.Core.csproj" />
+    <ProjectReference Include="../Core/PaddiChess.Core.csproj" />
     <PackageReference Include="SkiaSharp" Version="3.119.4" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.23.2" />
   </ItemGroup>

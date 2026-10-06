@@ -4,7 +4,7 @@
 
 ## 解决方案与依赖
 
-入口为 [`Paddi象棋.slnx`](../Paddi象棋.slnx)。项目使用 C# 命名空间 `PaddiXiangqi`，桌面应用和程序集采用“Paddi象棋”名称。棋谱格式标识为 `PaddiXiangqi/1`，旧数据目录名仅用于兼容迁移。
+入口为 [`PaddiChess.slnx`](../PaddiChess.slnx)。项目使用 C# 命名空间 `PaddiXiangqi`，桌面应用和程序集采用“Paddi象棋”名称。棋谱格式标识为 `PaddiXiangqi/1`，旧数据目录名仅用于兼容迁移。
 
 ```mermaid
 flowchart TD
@@ -24,15 +24,15 @@ flowchart TD
 
 | 路径 | 责任 | 边界 |
 | --- | --- | --- |
-| `Paddi象棋/Core` | 棋局、基本合法走法、FEN、棋谱、历史 | 无其他业务层与 Avalonia 依赖 |
-| `Paddi象棋/Engine` | UCI 进程、能力协商、规则客户端、模型 API、搜索预算 | 仅依赖 Core，不读取控件 |
-| `Paddi象棋/External` | 捕获、输入、像素、定位、样式、OCR、合法后继 | 依赖 Core、SkiaSharp、ONNX Runtime，不引用 Avalonia |
-| `Paddi象棋/Services` | 偏好、异步保存、棋谱存储、接管历史、声音 | 依赖 Core / Engine，不创建视图 |
-| `Paddi象棋/Sessions` | 同步状态机、后台识别、输入核验和控制方决策 | 依赖 Core / Engine / External，不持有控件 |
-| `Paddi象棋/Views` | AXAML、页面事件、窗口生命周期和交互调度 | 承接 UI，调用业务服务 |
-| `Paddi象棋/ViewModels` | 棋谱、候选、模型目录、规则表单等展示模型 | 不创建视觉控件 |
-| `Paddi象棋/Controls` | 自绘棋盘、曲线、标定和交互 | 将大量图形合并绘制，避免逐元素布局 |
-| `Paddi象棋/Native` | Swift 平台桥接、C++ 规则适配器及源码 | 独立进程协议，不嵌入 UI 状态 |
+| `PaddiChess/Core` | 棋局、基本合法走法、FEN、棋谱、历史 | 无其他业务层与 Avalonia 依赖 |
+| `PaddiChess/Engine` | UCI 进程、能力协商、规则客户端、模型 API、搜索预算 | 仅依赖 Core，不读取控件 |
+| `PaddiChess/External` | 捕获、输入、像素、定位、样式、OCR、合法后继 | 依赖 Core、SkiaSharp、ONNX Runtime，不引用 Avalonia |
+| `PaddiChess/Services` | 偏好、异步保存、棋谱存储、接管历史、声音 | 依赖 Core / Engine，不创建视图 |
+| `PaddiChess/Sessions` | 同步状态机、后台识别、输入核验和控制方决策 | 依赖 Core / Engine / External，不持有控件 |
+| `PaddiChess/Views` | AXAML、页面事件、窗口生命周期和交互调度 | 承接 UI，调用业务服务 |
+| `PaddiChess/ViewModels` | 棋谱、候选、模型目录、规则表单等展示模型 | 不创建视觉控件 |
+| `PaddiChess/Controls` | 自绘棋盘、曲线、标定和交互 | 将大量图形合并绘制，避免逐元素布局 |
+| `PaddiChess/Native` | Swift 平台桥接、C++ 规则适配器及源码 | 独立进程协议，不嵌入 UI 状态 |
 
 桌面 `.csproj` 用 `Compile Remove` 排除已拆出的业务目录，再通过项目引用连接，避免重复编译。架构测试验证五个业务程序集不引用 Avalonia，并限制 Core 的依赖方向。
 
@@ -59,7 +59,7 @@ flowchart TD
 | `Views/MainWindow.ExternalHistory.cs` | 会话记录与 UI 生命周期连接 |
 | `Views/ExternalHistoryWindow.axaml` | 会话／事件列表、日志和只读事件棋盘 |
 
-上述未带前缀的应用路径均位于 `Paddi象棋/` 下。
+上述未带前缀的应用路径均位于 `PaddiChess/` 下。
 
 ## 接管数据流
 
@@ -115,7 +115,7 @@ UI 预览始终创建独立棋局，棋盘禁止输入并关闭动画。图像�
 
 macOS 桥接由 Swift 编译，通过进程协议实现捕获、权限检测和输入。macOS 14 及以上采用常驻捕获流；较早版本有兼容路径。Windows 后端处理 GDI、像素与平台输入。Linux 未实现外部接管后端。
 
-`Native/PikafishRules` 固定使用 0906 规则源码，发布包的执棋引擎则为 0925；两者职责与规则配置不可混同。适配器不加载 NNUE、不执行棋力搜索，详见[组件来源](../Paddi象棋/Native/PikafishRules/SOURCE.md)。
+`Native/PikafishRules` 固定使用 0906 规则源码，发布包的执棋引擎则为 0925；两者职责与规则配置不可混同。适配器不加载 NNUE、不执行棋力搜索，详见[组件来源](../PaddiChess/Native/PikafishRules/SOURCE.md)。
 
 ## 后续改进方向
 

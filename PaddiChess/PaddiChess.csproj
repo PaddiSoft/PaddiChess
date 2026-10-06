@@ -23,11 +23,11 @@
 
   <ItemGroup>
     <Compile Remove="Core/**;Engine/**;External/**;Services/**;Sessions/**" />
-    <ProjectReference Include="Core/Paddi象棋.Core.csproj" />
-    <ProjectReference Include="Engine/Paddi象棋.Engine.csproj" />
-    <ProjectReference Include="External/Paddi象棋.External.csproj" />
-    <ProjectReference Include="Services/Paddi象棋.Services.csproj" />
-    <ProjectReference Include="Sessions/Paddi象棋.Sessions.csproj" />
+    <ProjectReference Include="Core/PaddiChess.Core.csproj" />
+    <ProjectReference Include="Engine/PaddiChess.Engine.csproj" />
+    <ProjectReference Include="External/PaddiChess.External.csproj" />
+    <ProjectReference Include="Services/PaddiChess.Services.csproj" />
+    <ProjectReference Include="Sessions/PaddiChess.Sessions.csproj" />
   </ItemGroup>
   <ItemGroup>
     <AvaloniaResource Include="Assets/Brand/*.png" />

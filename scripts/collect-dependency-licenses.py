@@ -15,7 +15,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-DEST = ROOT / "Paddi象棋/Packaging/ThirdParty"
+DEST = ROOT / "PaddiChess/Packaging/ThirdParty"
 FALLBACKS = {
     "Avalonia": ["Avalonia-LICENSE.md", "Avalonia-NOTICE.md"],
     "Avalonia.BuildServices": ["Avalonia.BuildServices-LICENSE.txt"],
@@ -28,7 +28,7 @@ FALLBACKS = {
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--assets", type=pathlib.Path,
-                        default=ROOT / "Paddi象棋/obj/project.assets.json")
+                        default=ROOT / "PaddiChess/obj/project.assets.json")
     args = parser.parse_args()
     assets = json.loads(args.assets.read_text(encoding="utf-8"))
     upstream = {item["file"]: item for item in

@@ -4,6 +4,6 @@
     <PackageId>PaddiXiangqi.Engine</PackageId>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../Core/Paddi象棋.Core.csproj" />
+    <ProjectReference Include="../Core/PaddiChess.Core.csproj" />
   </ItemGroup>
 </Project>

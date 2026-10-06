@@ -13,4 +13,4 @@ if [[ -z "$dotnet_path" ]]; then
 fi
 
 echo "正在编译并启动 Paddi象棋源码版。现有 .app 安装包保持不变。"
-exec "$dotnet_path" run --project "$project_root/Paddi象棋/Paddi象棋.csproj" -c Release --no-launch-profile
+exec "$dotnet_path" run --project "$project_root/PaddiChess/PaddiChess.csproj" -c Release --no-launch-profile

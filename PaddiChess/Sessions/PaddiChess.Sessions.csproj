@@ -4,8 +4,8 @@
     <PackageId>PaddiXiangqi.Sessions</PackageId>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../Core/Paddi象棋.Core.csproj" />
-    <ProjectReference Include="../Engine/Paddi象棋.Engine.csproj" />
-    <ProjectReference Include="../External/Paddi象棋.External.csproj" />
+    <ProjectReference Include="../Core/PaddiChess.Core.csproj" />
+    <ProjectReference Include="../Engine/PaddiChess.Engine.csproj" />
+    <ProjectReference Include="../External/PaddiChess.External.csproj" />
   </ItemGroup>
 </Project>

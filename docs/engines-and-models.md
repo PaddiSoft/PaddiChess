@@ -6,7 +6,7 @@
 
 随包引擎为 Pikafish 2026-09-25，配套 `pikafish.nnue`。程序通过 UCI 启动独立引擎进程；引擎执棋、分析与接管使用当前默认插件。
 
-引擎与 NNUE 保留各自许可。NNUE 随附协议包含未经允许不得商用等限制，应用的 AGPL 许可不会替代该协议；见[来源说明](../Paddi象棋/Packaging/Engine-README.md)。
+引擎与 NNUE 保留各自许可。NNUE 随附协议包含未经允许不得商用等限制，应用的 AGPL 许可不会替代该协议；见[来源说明](../PaddiChess/Packaging/Engine-README.md)。
 
 在“引擎插件”中：
 
@@ -39,7 +39,7 @@
 
 该组件固定为 0906 规则源码，**不随 0925 内置引擎或其他插件的规则选项切换**。低等级内置引擎选招也可能使用这份候选校验；外部插件则使用自己的搜索结果和已声明能力。目标游戏仍是外部实战的最终裁判。
 
-来源、协议和适配范围见[原生组件说明](../Paddi象棋/Native/PikafishRules/SOURCE.md)。组件完整源码与许可随发布包保存在 `Native/PikafishRules-source.zip`；此 ZIP 对应规则组件，不是 0925 主引擎的完整对应源码。
+来源、协议和适配范围见[原生组件说明](../PaddiChess/Native/PikafishRules/SOURCE.md)。组件完整源码与许可随发布包保存在 `Native/PikafishRules-source.zip`；此 ZIP 对应规则组件，不是 0925 主引擎的完整对应源码。
 
 ## 多服务与模型配置
 

@@ -4,11 +4,11 @@
 
 [发行版本](https://github.com/PaddiSoft/PaddiChess/releases) · [使用文档](docs/README.md) · [构建与测试](docs/development.md) · [问题反馈](https://github.com/PaddiSoft/PaddiChess/issues) · [参与贡献](CONTRIBUTING.md)
 
-## 用户实测：JJ 象棋 145 连胜
+## 作者测试：JJ 象棋 145 连胜
 
-用户反馈：使用 Paddi象棋在 JJ 象棋实战接管中取得 **145 连胜、100% 胜率，登上棋圣**。以下截图由用户提供并授权展示；这是该用户的实测记录，未经项目独立复核，也不构成对其他版本、设置、对手或运行环境的胜率保证。
+作者使用 Paddi象棋在 JJ 象棋实战接管测试中取得 **145 连胜、100% 胜率，登上棋圣**。以下截图为作者本次测试的战绩与接管界面；测试结果不保证其他版本、设置、对手或运行环境下的胜率。
 
-<img src="docs/images/jj-145-win-streak.png" alt="用户授权的 JJ 象棋 145 连胜、棋圣 1 战绩与 Paddi象棋接管界面" width="1200">
+<img src="docs/images/jj-145-win-streak.png" alt="作者测试的 JJ 象棋 145 连胜、棋圣 1 战绩与 Paddi象棋接管界面" width="1200">
 
 ## 可以做什么
 
@@ -65,7 +65,7 @@
 git clone https://github.com/PaddiSoft/PaddiChess.git
 cd PaddiChess
 bash scripts/verify.sh
-dotnet run --project Paddi象棋/Paddi象棋.csproj --configuration Release --no-restore
+dotnet run --project PaddiChess/PaddiChess.csproj --configuration Release --no-restore
 ```
 
 `verify.sh` 执行资源检查、锁定依赖还原、Release 构建和完整测试，并保存日志及 TRX。通过数量、平台跳过项和发布包验收以对应 Release 的实际记录为准；交叉编译成功不等于目标平台实机对局通过。
@@ -90,10 +90,10 @@ dotnet run --project Paddi象棋/Paddi象棋.csproj --configuration Release --no
 
 Paddi象棋应用代码采用 [AGPL-3.0](LICENSE)。第三方引擎、权重、OCR 模型和其他组件保留各自许可与来源说明；项目许可证不替代这些许可。随包 NNUE 有独立使用限制，包括未经允许不得用于商业用途，不能按本项目 AGPL 许可理解其使用范围。
 
-- Pikafish：[上游项目与源码入口](https://github.com/official-pikafish/Pikafish)、[随包引擎与 NNUE 来源](Paddi象棋/Packaging/Engine-README.md)、[NNUE 原许可](Pikafish.2026-09-25/NNUE权重协议（使用视为同意本协议）_NNUE%20License.txt)。内置版本来自项目中的 `Pikafish.2026-09-25` 原始发行包，保留其许可和作者文件；该二进制与上游具体源码提交的对应关系尚未独立核验。
-- PaddiRules：[0906 原生规则组件来源](Paddi象棋/Native/PikafishRules/SOURCE.md)，GPL 源码随包提供；这份源码仅对应规则组件，不是 0925 主引擎的完整对应源码。
-- PaddleOCR / RapidOCR：[离线模型来源](Paddi象棋/Assets/Ocr/SOURCE.md)与随包 Apache-2.0 声明。
+- Pikafish：[上游项目与源码入口](https://github.com/official-pikafish/Pikafish)、[随包引擎与 NNUE 来源](PaddiChess/Packaging/Engine-README.md)、[NNUE 原许可](Pikafish.2026-09-25/NNUE权重协议（使用视为同意本协议）_NNUE%20License.txt)。内置版本来自项目中的 `Pikafish.2026-09-25` 原始发行包，保留其许可和作者文件；该二进制与上游具体源码提交的对应关系尚未独立核验。
+- PaddiRules：[0906 原生规则组件来源](PaddiChess/Native/PikafishRules/SOURCE.md)，GPL 源码随包提供；这份源码仅对应规则组件，不是 0925 主引擎的完整对应源码。
+- PaddleOCR / RapidOCR：[离线模型来源](PaddiChess/Assets/Ocr/SOURCE.md)与随包 Apache-2.0 声明。
 - Avalonia、SkiaSharp、ONNX Runtime 及其他依赖：版本由项目文件与锁文件固定。
-- [品牌资源](Paddi象棋/Assets/Brand/README.md)与[识别参考资源](Paddi象棋/Assets/BoardSkins/README.md)另有来源说明。JJ 象棋截图用于展示用户授权的实测记录，不表示第三方运营方参与或背书。
+- [品牌资源](PaddiChess/Assets/Brand/README.md)与[识别参考资源](PaddiChess/Assets/BoardSkins/README.md)另有来源说明。JJ 象棋截图用于展示作者的测试记录，不表示第三方运营方参与或背书。
 
 缺陷和建议请提交 [Issue](https://github.com/PaddiSoft/PaddiChess/issues)。安全问题先阅读 [SECURITY.md](SECURITY.md)，不要在公开 Issue 中粘贴 Key 或含凭据的日志。

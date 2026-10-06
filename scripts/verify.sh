@@ -37,9 +37,9 @@ assets = {
     'Pikafish.2026-09-25/Pikafish-Linux-x86-64-universal': 1024 * 1024,
     'Pikafish.2026-09-25/Pikafish-Windows-x86-64-universal.exe': 1024 * 1024,
     'Pikafish.2026-09-25/pikafish.nnue': 1024 * 1024,
-    'Paddi象棋/Assets/Ocr/ch_PP-OCRv5_rec_mobile.onnx': 1024 * 1024,
-    'Paddi象棋.Tests/Fixtures/web-default-opening.png': 1024,
-    'Paddi象棋.Tests/Fixtures/jj-wechat-midgame-1.png': 1024,
+    'PaddiChess/Assets/Ocr/ch_PP-OCRv5_rec_mobile.onnx': 1024 * 1024,
+    'PaddiChess.Tests/Fixtures/web-default-opening.png': 1024,
+    'PaddiChess.Tests/Fixtures/jj-wechat-midgame-1.png': 1024,
 }
 missing = [str(path) for name, minimum in assets.items()
            if not (path := Path(name)).is_file() or path.stat().st_size < minimum]
@@ -47,7 +47,7 @@ if missing:
     raise SystemExit('Missing/truncated resources (including possible Git LFS pointers):\n  ' +
                      '\n  '.join(missing) +
                      '\nRestore the matching release assets before verification; no tests have run.')
-model = Path('Paddi象棋/Assets/Ocr/ch_PP-OCRv5_rec_mobile.onnx')
+model = Path('PaddiChess/Assets/Ocr/ch_PP-OCRv5_rec_mobile.onnx')
 if hashlib.sha256(model.read_bytes()).hexdigest() != '5825fc7ebf84ae7a412be049820b4d86d77620f204a041697b0494669b1742c5':
     raise SystemExit('OCR model checksum differs from Assets/Ocr/SOURCE.md; review the model before verification.')
 PY
@@ -58,8 +58,8 @@ results="$repo_root/artifacts/verification/$run_id"
 mkdir -p "$results"
 dotnet --info > "$results/dotnet-info.txt"
 printf 'Verification evidence: %s\n' "$results"
-dotnet restore Paddi象棋.slnx --locked-mode 2>&1 | tee "$results/restore.log"
-dotnet build Paddi象棋.slnx --configuration Release --no-restore -warnaserror 2>&1 | tee "$results/build.log"
-dotnet test Paddi象棋.Tests/Paddi象棋.Tests.csproj --configuration Release --no-build --no-restore \
+dotnet restore PaddiChess.slnx --locked-mode 2>&1 | tee "$results/restore.log"
+dotnet build PaddiChess.slnx --configuration Release --no-restore -warnaserror 2>&1 | tee "$results/build.log"
+dotnet test PaddiChess.Tests/PaddiChess.Tests.csproj --configuration Release --no-build --no-restore \
   --logger 'trx;LogFileName=verification.trx' --results-directory "$results" 2>&1 | tee "$results/test.log"
 printf 'Verification completed. Review platform-specific skips in %s/verification.trx\n' "$results"

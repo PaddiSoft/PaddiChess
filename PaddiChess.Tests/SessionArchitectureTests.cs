@@ -16,7 +16,7 @@ public class SessionArchitectureTests
         Assert.Equal(5, layers.Select(t => t.Assembly).Distinct().Count());
         foreach (var layer in layers)
             Assert.DoesNotContain(layer.Assembly.GetReferencedAssemblies(), a => a.Name!.StartsWith("Avalonia"));
-        Assert.DoesNotContain(typeof(XiangqiGame).Assembly.GetReferencedAssemblies(), a => a.Name!.StartsWith("Paddi象棋."));
+        Assert.DoesNotContain(typeof(XiangqiGame).Assembly.GetReferencedAssemblies(), a => a.Name!.StartsWith("PaddiChess."));
     }
 
     [Theory]

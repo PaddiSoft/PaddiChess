@@ -25,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../Paddi象棋/Paddi象棋.csproj" />
+    <ProjectReference Include="../PaddiChess/PaddiChess.csproj" />
   </ItemGroup>
 
 </Project>

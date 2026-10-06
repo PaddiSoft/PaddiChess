@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="PaddiChess/Core/PaddiChess.Core.csproj" />
+  <Project Path="PaddiChess/Engine/PaddiChess.Engine.csproj" />
+  <Project Path="PaddiChess/External/PaddiChess.External.csproj" />
+  <Project Path="PaddiChess/Services/PaddiChess.Services.csproj" />
+  <Project Path="PaddiChess/Sessions/PaddiChess.Sessions.csproj" />
+  <Project Path="PaddiChess/PaddiChess.csproj" />
+  <Project Path="PaddiChess.Tests/PaddiChess.Tests.csproj" />
+</Solution>

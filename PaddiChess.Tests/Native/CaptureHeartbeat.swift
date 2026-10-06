@@ -1,7 +1,7 @@
 // Read-only ScreenCaptureKit regression. Creates its own AppKit window and
 // captures only that window through PaddiBridge; never sends mouse or keyboard
 // events and never captures a user's game.
-// Run: swift Paddi象棋.Tests/Native/CaptureHeartbeat.swift <path-to-PaddiBridge> raw
+// Run: swift PaddiChess.Tests/Native/CaptureHeartbeat.swift <path-to-PaddiBridge> raw
 import AppKit
 import CoreGraphics
 

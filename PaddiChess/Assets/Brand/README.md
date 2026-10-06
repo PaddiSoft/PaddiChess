@@ -14,6 +14,6 @@
 
 ## 平台图标
 
-在 macOS 执行 `bash Paddi象棋/Packaging/build-icons.sh`，使用系统 `sips` 和 `iconutil` 从同一张 `Logo.png` 制作尺寸变体与 `.icns`；`MakeIcon.swift` 将尺寸变体封装成 Windows `.ico`，不重新绘制标志。
+在 macOS 执行 `bash PaddiChess/Packaging/build-icons.sh`，使用系统 `sips` 和 `iconutil` 从同一张 `Logo.png` 制作尺寸变体与 `.icns`；`MakeIcon.swift` 将尺寸变体封装成 Windows `.ico`，不重新绘制标志。
 
 `Packaging/Paddi.v1.png`、`Packaging/Paddi.v1.icns` 和 `Packaging/MakeIcon.v1.swift` 保留此前的图标版本。

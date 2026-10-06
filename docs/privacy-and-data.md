@@ -42,7 +42,7 @@ Key 只放在本次进程内存中，不写入 `settings.json`、棋谱或接管
 
 ```bash
 PADDI_SETTINGS_PATH="$PWD/.local-test-data/settings.json" \
-  dotnet run --project Paddi象棋/Paddi象棋.csproj --configuration Release
+  dotnet run --project PaddiChess/PaddiChess.csproj --configuration Release
 ```
 
 请将这种临时数据目录加入本地忽略，不提交其中设置或棋谱。指定自定义路径时，不迁移旧用户数据目录。
@@ -59,4 +59,4 @@ PADDI_SETTINGS_PATH="$PWD/.local-test-data/settings.json" \
 
 优先分享问题前后几步的棋谱和相关事件，不必上传整个数据目录。检查并去除无关窗口、账户标识、聊天内容、个人路径、服务地址与自由文本中的敏感内容。不要分享 Key、鉴权头、签名证书或私钥。
 
-真实棋盘截图、字体和主题资源需有提交／公开的权限。README 中的 JJ 象棋实测截图由用户单独授权展示，不意味着所有用户截图都默认可以公开。
+真实棋盘截图、字体和主题资源需有提交／公开的权限。README 中的 JJ 象棋截图展示作者的测试记录；其他用户的截图仍需取得相应授权后才能公开。

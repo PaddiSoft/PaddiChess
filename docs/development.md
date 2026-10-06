@@ -22,11 +22,11 @@ cd PaddiChess
 
 | 资源 | 预期路径 | 来源说明 |
 | --- | --- | --- |
-| 三平台执棋引擎 | `Pikafish.2026-09-25/Pikafish-{平台}-universal*` | [引擎来源与 SHA-256](../Paddi象棋/Packaging/Engine-README.md) |
+| 三平台执棋引擎 | `Pikafish.2026-09-25/Pikafish-{平台}-universal*` | [引擎来源与 SHA-256](../PaddiChess/Packaging/Engine-README.md) |
 | NNUE | `Pikafish.2026-09-25/pikafish.nnue` | 与该发行包配套，保留原 NNUE 许可 |
-| OCR 模型 | `Paddi象棋/Assets/Ocr/ch_PP-OCRv5_rec_mobile.onnx` | [来源与 SHA-256](../Paddi象棋/Assets/Ocr/SOURCE.md) |
-| 测试样本 | `Paddi象棋.Tests/Fixtures/` | 保留随样本提交的来源说明 |
-| 规则源码 | `Paddi象棋/Native/PikafishRules/upstream/` | [0906 规则源码说明](../Paddi象棋/Native/PikafishRules/SOURCE.md) |
+| OCR 模型 | `PaddiChess/Assets/Ocr/ch_PP-OCRv5_rec_mobile.onnx` | [来源与 SHA-256](../PaddiChess/Assets/Ocr/SOURCE.md) |
+| 测试样本 | `PaddiChess.Tests/Fixtures/` | 保留随样本提交的来源说明 |
+| 规则源码 | `PaddiChess/Native/PikafishRules/upstream/` | [0906 规则源码说明](../PaddiChess/Native/PikafishRules/SOURCE.md) |
 
 发布按目标 RID 选择对应引擎；完整验证同时检查三平台发行资源，因此仅保留宿主的那个文件仍无法通过资源检查。资源版本应与清单匹配；不能随意用“最新”模型或权重替代。
 
@@ -44,7 +44,7 @@ bash scripts/verify.sh
 
 1. 检查 `dotnet`、Python、Clang，以及宿主所需工具。
 2. 检查引擎、NNUE、OCR 和关键测试图大小；核验 OCR 哈希，拒绝缺失文件与占位文本。
-3. `dotnet restore Paddi象棋.slnx --locked-mode`。
+3. `dotnet restore PaddiChess.slnx --locked-mode`。
 4. Release 构建，使用 `-warnaserror`。
 5. 在该构建结果上运行完整测试项目，保存 TRX。
 
@@ -57,13 +57,13 @@ bash scripts/verify.sh
 完整验证后运行：
 
 ```bash
-dotnet run --project Paddi象棋/Paddi象棋.csproj --configuration Release --no-restore
+dotnet run --project PaddiChess/PaddiChess.csproj --configuration Release --no-restore
 ```
 
 开发中的定向回归示例：
 
 ```bash
-dotnet test Paddi象棋.Tests/Paddi象棋.Tests.csproj \
+dotnet test PaddiChess.Tests/PaddiChess.Tests.csproj \
   --configuration Release --filter FullyQualifiedName~ExternalHistory
 ```
 
@@ -78,12 +78,12 @@ dotnet test Paddi象棋.Tests/Paddi象棋.Tests.csproj \
 有意升级依赖时，检查项目引用与锁文件差异，再完整验证。例如：
 
 ```bash
-dotnet restore Paddi象棋.slnx --force-evaluate
+dotnet restore PaddiChess.slnx --force-evaluate
 for rid in osx-arm64 osx-x64 win-x64 linux-x64; do
-  dotnet restore Paddi象棋/Paddi象棋.csproj \
+  dotnet restore PaddiChess/PaddiChess.csproj \
     -p:RuntimeIdentifier="$rid" --force-evaluate
 done
-dotnet restore Paddi象棋.slnx --locked-mode
+dotnet restore PaddiChess.slnx --locked-mode
 ```
 
 显式 `RuntimeIdentifier` 让项目引用在属性求值时选择对应锁文件。常规验证和打包不应自动改写依赖锁。
@@ -93,23 +93,23 @@ dotnet restore Paddi象棋.slnx --locked-mode
 原生规则由 `Native/PikafishRules/build.sh` 构建：
 
 ```bash
-bash Paddi象棋/Native/PikafishRules/build.sh osx-arm64
+bash PaddiChess/Native/PikafishRules/build.sh osx-arm64
 ```
 
 支持 `osx-arm64`、`osx-x64`、`win-x64`、`linux-x64`。macOS 上跨编译 Windows／Linux 需要 Zig，可用 `PADDI_ZIG` 指向已安装的可执行文件：
 
 ```bash
 PADDI_ZIG="$(command -v zig)" \
-  bash Paddi象棋/Native/PikafishRules/build.sh win-x64
+  bash PaddiChess/Native/PikafishRules/build.sh win-x64
 ```
 
 Windows 宿主的 MSBuild 会调用 `Native/PikafishRules/build.ps1`，使用与 Bash 脚本相同的 C++ 源文件和编译参数生成 `PaddiRules.exe` 及对应源码 ZIP。先安装 Zig 0.13.0，并将 `zig.exe` 加入 PATH，或显式指定：
 
 ```powershell
 $env:PADDI_ZIG = 'C:\tools\zig\zig.exe'
-dotnet restore 'Paddi象棋.slnx' --locked-mode
-dotnet build 'Paddi象棋/Paddi象棋.csproj' -c Release --no-restore
-dotnet test 'Paddi象棋.Tests/Paddi象棋.Tests.csproj' -c Release
+dotnet restore 'PaddiChess.slnx' --locked-mode
+dotnet build 'PaddiChess/PaddiChess.csproj' -c Release --no-restore
+dotnet test 'PaddiChess.Tests/PaddiChess.Tests.csproj' -c Release
 ```
 
 此入口已完成代码审查；Windows 二进制经过 macOS 交叉构建，PowerShell 构建流程仍需要 Windows 本机验收。
@@ -119,8 +119,8 @@ dotnet test 'Paddi象棋.Tests/Paddi象棋.Tests.csproj' -c Release
 macOS 上的本地包示例：
 
 ```bash
-PADDI_SIGN_IDENTITY=- bash Paddi象棋/Packaging/package.sh arm
-PADDI_ZIG="$(command -v zig)" bash Paddi象棋/Packaging/package.sh windows
+PADDI_SIGN_IDENTITY=- bash PaddiChess/Packaging/package.sh arm
+PADDI_ZIG="$(command -v zig)" bash PaddiChess/Packaging/package.sh windows
 ```
 
 其他目标为 `intel`、`linux`、`all`；输出默认在 `dist/`，可用 `PADDI_DIST_DIR` 改变。打包脚本发布自带运行时的应用，保留引擎、模型、规则组件、许可与源码 ZIP。

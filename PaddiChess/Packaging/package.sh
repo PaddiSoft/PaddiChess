@@ -2,9 +2,9 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-PROJECT="$ROOT/Paddi象棋/Paddi象棋.csproj"
+PROJECT="$ROOT/PaddiChess/PaddiChess.csproj"
 DIST="${PADDI_DIST_DIR:-$ROOT/dist}"
-PACKAGING="$ROOT/Paddi象棋/Packaging"
+PACKAGING="$ROOT/PaddiChess/Packaging"
 TARGET="${1:-all}"
 # Ad-hoc signing works on a clean development machine. Release maintainers can
 # explicitly supply their own installed identity; never commit a personal one.
@@ -12,7 +12,7 @@ TARGET="${1:-all}"
 SIGNING_IDENTITY="${PADDI_SIGN_IDENTITY:--}"
 
 if [[ "$(uname -s)" == "Darwin" ]] &&
-   [[ "$ROOT/Paddi象棋/Assets/Brand/Logo.png" -nt "$PACKAGING/Paddi.png" ||
+   [[ "$ROOT/PaddiChess/Assets/Brand/Logo.png" -nt "$PACKAGING/Paddi.png" ||
       ! -f "$PACKAGING/Paddi.icns" || ! -f "$PACKAGING/Paddi.ico" ]]; then
   bash "$PACKAGING/build-icons.sh"
 fi
@@ -78,7 +78,7 @@ package_windows() (
     echo "Windows 发布目录包含其他平台的程序，请检查项目的 RID 资源配置。" >&2
     return 1
   fi
-  cp "$PACKAGING/Windows-使用说明与推荐设置.txt" "$bundle/使用说明与推荐设置.txt"
+  cp "$PACKAGING/Windows-Usage-and-Recommended-Settings.txt" "$bundle/使用说明与推荐设置.txt"
   # Python's ZIP writer sets the UTF-8 filename flag. macOS's zip otherwise
   # stores these Chinese names without that flag, which garbles them on Windows.
   python3 - "$staging" "$name" <<'PY'
