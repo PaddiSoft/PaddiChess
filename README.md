@@ -1,5 +1,12 @@
 # Paddi象棋 · PaddiChess
 
+> [!IMPORTANT]
+> **Paddi象棋永久免费。作者不销售付费版，谨防冒充官方的收费版本。**
+>
+> 如果你觉得好用，可以 **[❤️ 给作者一点小小的赞助心意](https://paddisoft.com/embed/creators/paddi)**。
+>
+> 赞助完全自愿，不影响功能使用。
+
 基于 **.NET 10 + Avalonia** 的桌面象棋客户端，把本机 UCI 引擎、大模型对弈、棋谱复盘和外部棋盘接管放在同一个工作台中。
 
 [发行版本](https://github.com/PaddiSoft/PaddiChess/releases) · [使用文档](docs/README.md) · [构建与测试](docs/development.md) · [问题反馈](https://github.com/PaddiSoft/PaddiChess/issues) · [参与贡献](CONTRIBUTING.md)

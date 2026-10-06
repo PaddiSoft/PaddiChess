@@ -10,8 +10,8 @@
         Background="#F2F5FA" RequestedThemeVariant="Light" Classes="motion">
 
 
-  <Grid RowDefinitions="62,Auto,*">
-    <Image Grid.Row="2" Source="{x:Static local:BrandAssets.WorkspaceBackdrop}"
+  <Grid RowDefinitions="48,28,Auto,*">
+    <Image Grid.Row="3" Source="{x:Static local:BrandAssets.WorkspaceBackdrop}"
            Stretch="UniformToFill" Opacity="0.28" IsHitTestVisible="False"/>
     <Border Grid.Row="0" Background="White" BorderBrush="#E2E7ED" BorderThickness="0,0,0,1" Padding="17,0">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" VerticalAlignment="Center">
@@ -39,7 +39,26 @@
         </StackPanel>
       </Grid>
     </Border>
-    <Grid x:Name="WorkspaceContextRow" Grid.Row="1" ColumnDefinitions="*,Auto" Margin="19,9,19,0" ColumnSpacing="12">
+    <Border x:Name="FreeAndSupportBanner" Grid.Row="1" Background="#FFF7E8"
+            BorderBrush="#EBDCC1" BorderThickness="0,0,0,1" Padding="19,1">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12" VerticalAlignment="Center">
+        <Border Background="#A45C20" CornerRadius="6" Padding="8,2" VerticalAlignment="Center">
+          <TextBlock Text="永久免费" FontSize="12" FontWeight="Bold" Foreground="White"/>
+        </Border>
+        <TextBlock Grid.Column="1" Text="作者不销售付费版，谨防冒充官方的收费版本。"
+                   Foreground="#715235" FontSize="12" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="2" Text="如果你觉得好用，可以给作者一点小小的赞助心意。"
+                   Foreground="#715235" FontSize="12" VerticalAlignment="Center"/>
+        <HyperlinkButton x:Name="SponsorAuthorButton" Grid.Column="3" Content="赞助作者 ↗"
+                         NavigateUri="https://paddisoft.com/embed/creators/paddi"
+                         Height="24" MinHeight="24" Padding="9,2" CornerRadius="7"
+                         FontSize="12" FontWeight="SemiBold" Foreground="#315DA4"
+                         Background="White" BorderBrush="#D9CAB4" BorderThickness="1"
+                         VerticalAlignment="Center"
+                         ToolTip.Tip="自愿赞助，不影响任何功能；点击在浏览器中打开作者赞助页。"/>
+      </Grid>
+    </Border>
+    <Grid x:Name="WorkspaceContextRow" Grid.Row="2" ColumnDefinitions="*,Auto" Margin="19,9,19,0" ColumnSpacing="12">
       <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
         <TextBlock x:Name="WorkspaceTitleText" Text="对弈" FontWeight="SemiBold" Foreground="#35465F" FontSize="14"/>
         <TextBlock x:Name="WorkspaceHintText" Text="棋盘 · 棋谱 · 双方执棋" Classes="muted" FontSize="11" VerticalAlignment="Center"/>
@@ -55,7 +74,7 @@
       </StackPanel>
     </Grid>
 
-    <Grid x:Name="WorkspaceGrid" Grid.Row="2" ColumnDefinitions="1.2*,5,240,5,1*" ColumnSpacing="6" Margin="13">
+    <Grid x:Name="WorkspaceGrid" Grid.Row="3" ColumnDefinitions="1.2*,5,240,5,1*" ColumnSpacing="6" Margin="13,6">
       <Border x:Name="BoardPane" Grid.Column="0" Background="White" CornerRadius="16" BorderBrush="#E1E6ED" BorderThickness="1" Padding="12">
         <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="8">
           <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="4,1,4,0">
