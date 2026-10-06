@@ -13,7 +13,7 @@
 | macOS Intel | 若该版本提供 `Paddi象棋-macOS-Intel.zip` | `Paddi象棋-Intel.app` |
 | Linux x64 | 若该版本提供 `Paddi象棋-Linux-x64.tar.gz` | `Paddi象棋` |
 
-发布包自带 .NET 运行时、本机引擎、NNUE、原生规则组件和 OCR 模型。完整解压，保留目录结构；不要只复制 `.exe` 或应用包内主程序。CPU 架构应与发布目标匹配。Linux 外部接管尚未实现；Intel 与 Linux 是否提供本次预构建附件，以 Release 为准。
+发布包自带 .NET 运行时、本机引擎、NNUE、原生规则组件、象棋识别模型和 OCR 模型。完整解压，保留目录结构；不要只复制 `.exe` 或应用包内主程序。CPU 架构应与发布目标匹配。Linux 外部接管尚未实现；Intel 与 Linux 是否提供本次预构建附件，以 Release 为准。
 
 交叉编译结果不等于完整系统兼容性矩阵。Windows 的 GDI、DPI 和输入路径需要在 Windows 实际验证；macOS 原生桥接构建目标也不代表所有旧系统均已实测。
 

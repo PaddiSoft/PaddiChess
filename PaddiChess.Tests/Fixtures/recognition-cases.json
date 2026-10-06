@@ -1,0 +1,210 @@
+[
+  {
+    "id": "jj-rook-capture-before",
+    "path": "Fixtures/jj-rook-capture-before.png",
+    "grid": [
+      52,
+      60,
+      724,
+      787
+    ],
+    "flipped": false,
+    "fen": "2bak3r/4a4/2ncb2c1/rRp1C1n1p/6p2/2P1P4/p5P1P/2N1C1N2/9/2BAKABR1",
+    "group": "reported"
+  },
+  {
+    "id": "jj-rook-capture-after",
+    "path": "Fixtures/jj-rook-capture-after.png",
+    "grid": [
+      52,
+      60,
+      724,
+      787
+    ],
+    "flipped": false,
+    "fen": "2bak3r/4a4/2ncb2c1/1rp1C1n1p/6p2/2P1P4/p5P1P/2N1C1N2/9/2BAKABR1",
+    "group": "reported"
+  },
+  {
+    "id": "jj-rook-capture-horse",
+    "path": "Fixtures/jj-rook-capture-horse.png",
+    "grid": [
+      52,
+      60,
+      724,
+      787
+    ],
+    "flipped": false,
+    "fen": "2bak3r/4a4/2ncb2c1/1rp1C1n1p/6p2/2P1P4/p3N1P1P/4C1N2/9/2BAKABR1",
+    "group": "reported"
+  },
+  {
+    "id": "jj-silver-blue-midgame",
+    "path": "Fixtures/jj-silver-blue-midgame.png",
+    "grid": [
+      48,
+      61,
+      720,
+      790
+    ],
+    "flipped": false,
+    "fen": "rnbakab2/9/1c4n2/2p1p3p/p5p2/2P6/P3P1P1P/4C2r1/4A4/RNBAK1BN1",
+    "group": "reported"
+  },
+  {
+    "id": "jj-silver-blue-opening-flipped",
+    "path": "Fixtures/jj-silver-blue-opening-flipped.png",
+    "grid": [
+      52,
+      62,
+      725,
+      791
+    ],
+    "flipped": true,
+    "fen": "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C2B2C1/9/RNBAKA1NR",
+    "group": "reported"
+  },
+  {
+    "id": "jj-wechat-midgame-1",
+    "path": "Fixtures/jj-wechat-midgame-1.png",
+    "grid": [
+      59,
+      471,
+      863,
+      1350
+    ],
+    "flipped": true,
+    "fen": "4ka3/4a4/4b1n2/p3p1C1p/1n5r1/2R1c1P2/P4r1cP/4B1N2/3NA3C/3AK1BR1",
+    "group": "reported"
+  },
+  {
+    "id": "jj-wechat-midgame-2",
+    "path": "Fixtures/jj-wechat-midgame-2.png",
+    "grid": [
+      59,
+      471,
+      863,
+      1350
+    ],
+    "flipped": true,
+    "fen": "3k1a3/4a4/4b1n2/p4rNPp/1n7/4p4/PR6P/4B4/4Ac2C/3AK1B2",
+    "group": "reported"
+  },
+  {
+    "id": "jj-wechat-midgame-3",
+    "path": "Fixtures/jj-wechat-midgame-3.png",
+    "grid": [
+      59,
+      471,
+      863,
+      1350
+    ],
+    "flipped": true,
+    "fen": "5a3/3ka4/4b1n2/p4rNPp/9/3np4/P7P/4BA3/1R5cC/3AK1B2",
+    "group": "reported"
+  },
+  {
+    "id": "jj-wechat-midgame-5",
+    "path": "Fixtures/jj-wechat-midgame-5.png",
+    "grid": [
+      59,
+      471,
+      863,
+      1350
+    ],
+    "flipped": true,
+    "fen": "4ka3/4a4/6R2/p6Pp/9/4p4/P7P/8B/2nr5/3AK1B2",
+    "group": "reported"
+  },
+  {
+    "id": "jj-gold-editor-overlay",
+    "path": "Fixtures/jj-gold-editor-overlay.png",
+    "grid": [
+      37,
+      32,
+      540,
+      582
+    ],
+    "flipped": true,
+    "fen": "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C2B2C1/9/RN1AKABNR",
+    "group": "overlay"
+  },
+  {
+    "id": "web-windows-reported",
+    "path": "Fixtures/web-windows-reported.png",
+    "grid": [
+      33,
+      34,
+      266,
+      295
+    ],
+    "flipped": false,
+    "fen": "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR",
+    "group": "overlay"
+  },
+  {
+    "id": "web-default-opening",
+    "path": "Fixtures/web-default-opening.png",
+    "grid": [
+      32.5,
+      32.5,
+      462.5,
+      516.25
+    ],
+    "flipped": false,
+    "fen": "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR",
+    "group": "reference"
+  },
+  {
+    "id": "playxiangqi-opening",
+    "path": "Fixtures/playxiangqi-opening.png",
+    "grid": [
+      55,
+      55,
+      855,
+      955
+    ],
+    "flipped": false,
+    "fen": "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR",
+    "group": "rendered"
+  },
+  {
+    "id": "ocr-unseen-ivory",
+    "path": "Fixtures/ocr-unseen-ivory.png",
+    "grid": [
+      50,
+      50,
+      570,
+      635
+    ],
+    "flipped": false,
+    "fen": "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR",
+    "group": "synthetic"
+  },
+  {
+    "id": "ocr-unseen-blue-green",
+    "path": "Fixtures/ocr-unseen-blue-green.png",
+    "grid": [
+      50,
+      50,
+      570,
+      635
+    ],
+    "flipped": true,
+    "fen": "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR",
+    "group": "synthetic"
+  },
+  {
+    "id": "jj-classic",
+    "path": "Assets/BoardSkins/jj-classic.png",
+    "grid": [
+      36,
+      35,
+      570,
+      620
+    ],
+    "flipped": false,
+    "fen": "r1bakabnr/9/1cn3c2/p1p1p1p1p/9/6P2/P1P1P3P/4C2C1/9/RNBAKABNR",
+    "group": "reference"
+  }
+]

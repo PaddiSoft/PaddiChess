@@ -25,7 +25,7 @@ public partial class ExternalSessionTests
                 window.FindControl<CheckBox>("DepthLimitCheck")!.IsChecked = true;
                 window.FindControl<NumericUpDown>("DepthBox")!.Value=2;
                 window.FindControl<NumericUpDown>("ThinkBox")!.Value=1;
-                Set(window,"_externalDesktop",desktop);
+                Set(window,"_externalDesktop",desktop); Set(window, "_positionRecognizer", new SyntheticPositionRecognizer());
                 Set(window,"_externalFrame",await desktop.CaptureAsync(desktop.Target,default));
                 Set(window,"_externalCalibration",new BoardCalibration(40,40,440,490,false));Set(window,"_externalPositionReady",true);
                 desktop.BlockBeforeCount=stage=="before"?2:0;

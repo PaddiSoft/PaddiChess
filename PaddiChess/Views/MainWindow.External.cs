@@ -776,9 +776,13 @@ public partial class MainWindow
                     var latestCheck = await observationReader.ReadAsync(latest, ct);
                     if (!ExternalRecognitionRefresh.SameSamples(check, latestCheck))
                     {
-                        identityRead = await _positionRecognizer.ReadTemplatesAsync(latestCheck,
-                            _game.RedToMove, ct, verificationSkin, verificationPath);
-                        beforeInput = await Task.Run(() => ExternalInputVerification.Check(_externalTracker!, _game, latestCheck, identityRead), ct);
+                        // The independent read belongs to beforeClick, not latest.
+                        // Let the observation loop reconcile the fresh board before
+                        // requesting another read; never downgrade to a template
+                        // or authorize a stale decision against different pixels.
+                        if (identityRead != null) recognitionRefresh.Seed(verificationIdentity, null, check, identityRead);
+                        captureImmediately = true;
+                        continue;
                     }
                     check = latestCheck;
                 }

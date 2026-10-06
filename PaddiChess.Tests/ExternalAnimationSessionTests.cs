@@ -117,7 +117,7 @@ public partial class ExternalSessionTests
         window.FindControl<NumericUpDown>("ThinkBox")!.Value=1;
         window.FindControl<ComboBox>("ExternalSideBox")!.SelectedIndex=1;
         window.FindControl<ComboBox>("ExternalOrientationBox")!.SelectedIndex=geometry.RedAtTop?1:0;
-        Set(window,"_externalDesktop",desktop);Set(window,"_externalCalibration",geometry);
+        Set(window,"_externalDesktop",desktop); Set(window, "_positionRecognizer", new SyntheticPositionRecognizer());Set(window,"_externalCalibration",geometry);
     }
 
     private sealed class AnimationFramesDesktop(byte[] initial,IReadOnlyList<byte[]> frames):IExternalDesktop

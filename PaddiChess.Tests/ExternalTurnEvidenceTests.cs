@@ -139,7 +139,7 @@ public partial class ExternalSessionTests
                 var geometry = new BoardCalibration(40, 40, 440, 490, false);
                 var frame = new ExternalFrame(new(951, 951, "turn evidence fixture", 0, 0, 480, 530), ExternalBoardTests.Render(game));
                 var observed = BoardObservation.Read(frame, geometry);
-                Set(window, "_externalDesktop", new TurnEvidenceDesktop(frame));
+                Set(window, "_externalDesktop", new TurnEvidenceDesktop(frame)); Set(window, "_positionRecognizer", new SyntheticPositionRecognizer());
                 Set(window, "_externalFrame", frame);
                 Set(window, "_externalCalibration", geometry);
                 Set(window, "_externalTracker", new ExternalBoardTracker(observed, game));

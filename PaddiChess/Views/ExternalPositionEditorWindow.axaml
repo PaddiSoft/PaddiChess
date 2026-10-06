@@ -11,7 +11,7 @@
       <Button x:Name="ExternalEditorManual" Content="两点重新定位"/>
       <Button x:Name="ExternalEditorRefresh" Content="刷新截图并识别"/>
       <Button x:Name="ExternalEditorFlip" Content="朝向：黑上红下 ↕"/>
-      <Button x:Name="ExternalEditorOcr" Content="本地识字"/>
+      <Button x:Name="ExternalEditorOcr" Content="文字补识" ToolTip.Tip="默认使用象棋专用模型。仍有棋子不确定时，可用中文 OCR 完整复查，耗时会更长。"/>
       <local:SafeComboBox x:Name="ExternalEditorTurn" Width="150" Margin="0,0,0,4"/>
     </WrapPanel>
     <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="12">

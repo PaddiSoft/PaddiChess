@@ -8,6 +8,7 @@ namespace PaddiXiangqi.Tests;
 /// dots and selection circles are editor overlays, not raw capture pixels. This
 /// is an obstruction safety case, not proof that this game's raw skin is read.
 /// </summary>
+[Collection("Local recognition")]
 public class GoldEditorOverlayRecognitionTests(ITestOutputHelper output)
 {
     [Fact]

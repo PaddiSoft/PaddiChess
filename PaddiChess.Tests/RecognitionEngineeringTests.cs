@@ -4,6 +4,7 @@ using PaddiXiangqi.External;
 
 namespace PaddiXiangqi.Tests;
 
+[Collection("Local recognition")]
 public class RecognitionEngineeringTests
 {
     [Fact]

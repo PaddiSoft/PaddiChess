@@ -147,7 +147,7 @@ public class ExternalAutoSideUiTests
                 window.FindControl<CheckBox>("AutoAnalyzeCheck")!.IsChecked = false;
                 window.FindControl<ComboBox>("ExternalOrientationBox")!.SelectedIndex = 1;
                 Assert.Equal(1, window.FindControl<ComboBox>("ExternalSideBox")!.SelectedIndex);
-                Set(window, "_externalDesktop", desktop);
+                Set(window, "_externalDesktop", desktop); Set(window, "_positionRecognizer", new SyntheticPositionRecognizer());
                 Set(window, "_externalFrame", await desktop.CaptureAsync(desktop.Target, CancellationToken.None));
                 Set(window, "_externalCalibration", new BoardCalibration(40, 40, 440, 490, true));
                 window.FindControl<TextBox>("ExternalFenBox")!.Text = desktop.Game.CurrentFen();

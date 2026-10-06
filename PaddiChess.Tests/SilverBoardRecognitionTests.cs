@@ -7,6 +7,7 @@ using Xunit.Abstractions;
 namespace PaddiXiangqi.Tests;
 
 /// <summary>Reported board crops are validation data only; no skin is learned or loaded.</summary>
+[Collection("Local recognition")]
 public class SilverBoardRecognitionTests(ITestOutputHelper output)
 {
     public const string ExpectedFen = "rnbakab2/9/1c4n2/2p1p3p/p5p2/2P6/P3P1P1P/4C2r1/4A4/RNBAK1BN1 w - - 0 1";

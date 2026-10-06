@@ -34,7 +34,7 @@ public partial class ExternalSessionTests
                 window.FindControl<ComboBox>("ExternalSpeedBox")!.SelectedIndex = 0;
                 var geometry = new BoardCalibration(40, 40, 440, 490, false);
                 var first = await desktop.CaptureAsync(desktop.Target, default);
-                Set(window, "_externalDesktop", desktop);
+                Set(window, "_externalDesktop", desktop); Set(window, "_positionRecognizer", new SyntheticPositionRecognizer());
                 Set(window, "_externalFrame", first);
                 Set(window, "_externalCalibration", geometry);
                 Set(window, "_externalSessionSkin", BoardSkin.Learn("first-move fixture",

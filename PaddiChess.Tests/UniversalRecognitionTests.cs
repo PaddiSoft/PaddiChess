@@ -4,6 +4,7 @@ using SkiaSharp;
 
 namespace PaddiXiangqi.Tests;
 
+[Collection("Local recognition")]
 public class UniversalRecognitionTests
 {
     private static byte[] Fixture(string name) => File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory,"Fixtures",name));

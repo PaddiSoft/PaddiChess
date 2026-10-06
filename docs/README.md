@@ -12,6 +12,8 @@
 6. [数据与隐私](privacy-and-data.md)：本机持久数据、API 请求、截图与问题反馈。
 7. [排查指南](troubleshooting.md)：常见问题、恢复方法和有效的缺陷报告。
 
+- [棋盘识别](recognition.md)：模型、离线识别、局部补识与测试范围。
+
 ## 开发
 
 - [工程架构](architecture.md)：模块依赖、关键源码、会话数据流和并发约定。

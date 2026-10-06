@@ -60,3 +60,5 @@ sound assets, engine weights or downloaded engines. Those require their own prov
 
 Maintainers: after updating packages, run `dotnet restore`, then
 `python3 scripts/collect-dependency-licenses.py`; review and commit the changed notices.
+
+Xiangqi board classifier: see `Assets/Recognition/SOURCE.md`, the retained upstream MIT metadata and `LICENSE.txt`.

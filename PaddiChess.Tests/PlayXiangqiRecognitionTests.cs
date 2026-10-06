@@ -4,6 +4,7 @@ using SkiaSharp;
 
 namespace PaddiXiangqi.Tests;
 
+[Collection("Local recognition")]
 public class PlayXiangqiRecognitionTests
 {
     [Theory]

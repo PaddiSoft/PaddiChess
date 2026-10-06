@@ -18,12 +18,13 @@ git clone https://github.com/PaddiSoft/PaddiChess.git
 cd PaddiChess
 ```
 
-固定版本的三平台引擎、NNUE、OCR 和测试资源直接随 Git 仓库提供，无须 Git LFS 或额外资源下载步骤。正常克隆后可运行下述验证；若手动复制了部分源码或过滤了二进制文件，请先恢复仓库中的完整资源。
+固定版本的三平台引擎、NNUE、象棋识别模型、OCR 和测试资源直接随 Git 仓库提供，无须 Git LFS 或额外资源下载步骤。正常克隆后可运行下述验证；若手动复制了部分源码或过滤了二进制文件，请先恢复仓库中的完整资源。
 
 | 资源 | 预期路径 | 来源说明 |
 | --- | --- | --- |
 | 三平台执棋引擎 | `Pikafish.2026-09-25/Pikafish-{平台}-universal*` | [引擎来源与 SHA-256](../PaddiChess/Packaging/Engine-README.md) |
 | NNUE | `Pikafish.2026-09-25/pikafish.nnue` | 与该发行包配套，保留原 NNUE 许可 |
+| 象棋专用模型 | `PaddiChess/Assets/Recognition/xiangqi-nano-v3.onnx` | [来源、MIT 许可与 SHA-256](../PaddiChess/Assets/Recognition/SOURCE.md) |
 | OCR 模型 | `PaddiChess/Assets/Ocr/ch_PP-OCRv5_rec_mobile.onnx` | [来源与 SHA-256](../PaddiChess/Assets/Ocr/SOURCE.md) |
 | 测试样本 | `PaddiChess.Tests/Fixtures/` | 保留随样本提交的来源说明 |
 | 规则源码 | `PaddiChess/Native/PikafishRules/upstream/` | [0906 规则源码说明](../PaddiChess/Native/PikafishRules/SOURCE.md) |
@@ -43,7 +44,7 @@ bash scripts/verify.sh
 脚本依次执行：
 
 1. 检查 `dotnet`、Python、Clang，以及宿主所需工具。
-2. 检查引擎、NNUE、OCR 和关键测试图大小；核验 OCR 哈希，拒绝缺失文件与占位文本。
+2. 检查引擎、NNUE、OCR 和关键测试图大小；核验象棋识别与 OCR 模型哈希，拒绝缺失文件与占位文本。
 3. `dotnet restore PaddiChess.slnx --locked-mode`。
 4. Release 构建，使用 `-warnaserror`。
 5. 在该构建结果上运行完整测试项目，保存 TRX。

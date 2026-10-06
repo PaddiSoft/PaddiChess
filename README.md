@@ -29,7 +29,7 @@
 
 ## 下载与安装
 
-从 [GitHub Releases](https://github.com/PaddiSoft/PaddiChess/releases) 下载与你的系统匹配的包，完整解压后运行。发布包自带 .NET 运行时、引擎、配套 NNUE 和离线 OCR 资源，无须另外安装 .NET。
+从 [GitHub Releases](https://github.com/PaddiSoft/PaddiChess/releases) 下载与你的系统匹配的包，完整解压后运行。发布包自带 .NET 运行时、引擎、配套 NNUE 和离线象棋识别与 OCR 资源，无须另外安装 .NET。
 
 | 平台 | 发布包／使用方式 | 当前范围 |
 | --- | --- | --- |
@@ -62,11 +62,11 @@
 
 引擎搜索在本机运行。插件规则按 UCI 握手声明展示；模型候选由独立 `PaddiRules` 原生组件校验。该组件使用 Pikafish 2026-09-06 规则源码，**不会自动继承其他引擎插件的规则设置**。目标游戏仍负责外部对局的最终裁定。
 
-棋盘识别在本机完成，使用随包离线 OCR。启用模型 API 后，会把棋局文本与候选发送至你配置的服务；API Key 只保留在本次运行内存，不写入设置、棋谱或接管历史。模型权限、费用、思考等级支持和服务端数据处理由对应服务决定。详见[引擎与模型](docs/engines-and-models.md)、[数据与隐私](docs/privacy-and-data.md)。
+棋盘识别在本机完成，默认使用随包象棋专用模型，中文 OCR 仅补查不确定位置。无需按皮肤安装识别包，详见[识别流程与实测范围](docs/recognition.md)。启用模型 API 后，会把棋局文本与候选发送至你配置的服务；API Key 只保留在本次运行内存，不写入设置、棋谱或接管历史。模型权限、费用、思考等级支持和服务端数据处理由对应服务决定。详见[引擎与模型](docs/engines-and-models.md)、[数据与隐私](docs/privacy-and-data.md)。
 
 ## 从源码运行
 
-需要 `global.json` 指定的 .NET 10 SDK。固定版本的三平台引擎、NNUE、OCR 和测试资源随 Git 仓库提供，正常克隆后无须另行下载。macOS 还需要 Xcode Command Line Tools；完整环境与资源清单见[开发指南](docs/development.md)。
+需要 `global.json` 指定的 .NET 10 SDK。固定版本的三平台引擎、NNUE、象棋识别模型、OCR 和测试资源随 Git 仓库提供，正常克隆后无须另行下载。macOS 还需要 Xcode Command Line Tools；完整环境与资源清单见[开发指南](docs/development.md)。
 
 ```bash
 git clone https://github.com/PaddiSoft/PaddiChess.git
@@ -87,6 +87,7 @@ dotnet run --project PaddiChess/PaddiChess.csproj --configuration Release --no-r
 | [快速上手](docs/usage.md) | 工作区、本地对弈、分析、摆棋和复盘 |
 | [外部接管](docs/external-takeover.md) | 连接、标准开局、确认机制、记录、平台输入 |
 | [引擎与模型](docs/engines-and-models.md) | UCI 插件、原生规则、多服务与思考等级 |
+| [棋盘识别](docs/recognition.md) | 专用模型、补识、置信度、测试与限制 |
 | [性能说明](docs/performance.md) | 线程、Hash、时间、采样、CPU 与 AOT |
 | [数据与隐私](docs/privacy-and-data.md) | 本机文件、临时截图、API 数据、分享记录 |
 | [工程架构](docs/architecture.md) | 项目边界、数据流、状态与生命周期 |
@@ -99,6 +100,7 @@ Paddi象棋应用代码采用 [AGPL-3.0](LICENSE)。第三方引擎、权重、O
 
 - Pikafish：[上游项目与源码入口](https://github.com/official-pikafish/Pikafish)、[随包引擎与 NNUE 来源](PaddiChess/Packaging/Engine-README.md)、[NNUE 原许可](Pikafish.2026-09-25/NNUE权重协议（使用视为同意本协议）_NNUE%20License.txt)。内置版本来自项目中的 `Pikafish.2026-09-25` 原始发行包，保留其许可和作者文件；该二进制与上游具体源码提交的对应关系尚未独立核验。
 - PaddiRules：[0906 原生规则组件来源](PaddiChess/Native/PikafishRules/SOURCE.md)，GPL 源码随包提供；这份源码仅对应规则组件，不是 0925 主引擎的完整对应源码。
+- Chinese Chess Recognition：[专用模型来源、校验值与 MIT 声明](PaddiChess/Assets/Recognition/SOURCE.md)。
 - PaddleOCR / RapidOCR：[离线模型来源](PaddiChess/Assets/Ocr/SOURCE.md)与随包 Apache-2.0 声明。
 - Avalonia、SkiaSharp、ONNX Runtime 及其他依赖：版本由项目文件与锁文件固定。
 - [品牌资源](PaddiChess/Assets/Brand/README.md)与[识别参考资源](PaddiChess/Assets/BoardSkins/README.md)另有来源说明。JJ 象棋截图用于展示作者的测试记录，不表示第三方运营方参与或背书。

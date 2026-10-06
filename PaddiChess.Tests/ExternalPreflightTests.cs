@@ -315,7 +315,7 @@ public partial class ExternalSessionTests
                 window.FindControl<ComboBox>("ExternalSideBox")!.SelectedIndex = 0;
                 window.FindControl<ComboBox>("ExternalOrientationBox")!.SelectedIndex = flipped ? 1 : 0;
                 window.FindControl<ComboBox>("ExternalSpeedBox")!.SelectedIndex = 0;
-                Set(window, "_externalDesktop", desktop);
+                Set(window, "_externalDesktop", desktop); Set(window, "_positionRecognizer", new SyntheticPositionRecognizer());
                 var first = await desktop.CaptureAsync(desktop.Target, default);
                 Set(window, "_externalFrame", first);
                 var geometry = new BoardCalibration(40, 40, 440, 490, flipped);

@@ -125,7 +125,7 @@ public partial class ExternalSessionTests
                 // the new lower-side default so the input timing remains the subject.
                 window.FindControl<CheckBox>("ExternalAutoSideCheck")!.IsChecked = false;
                 window.FindControl<ComboBox>("ExternalSideBox")!.SelectedIndex = 0;
-                Set(window, "_externalDesktop", desktop);
+                Set(window, "_externalDesktop", desktop); Set(window, "_positionRecognizer", new SyntheticPositionRecognizer());
                 Set(window, "_externalFrame", await desktop.CaptureAsync(desktop.Target, default));
                 Set(window, "_externalCalibration", new BoardCalibration(40, 40, 440, 490, flipped));
                 Set(window, "_externalPositionReady", true);

@@ -32,7 +32,7 @@ public partial class ExternalSessionTests
                 window.FindControl<CheckBox>("ExternalAutoSideCheck")!.IsChecked = false;
                 window.FindControl<ComboBox>("ExternalSideBox")!.SelectedIndex = 0;
                 window.FindControl<ComboBox>("ExternalOrientationBox")!.SelectedIndex = flipped ? 1 : 0;
-                Set(window, "_externalDesktop", desktop);
+                Set(window, "_externalDesktop", desktop); Set(window, "_positionRecognizer", new SyntheticPositionRecognizer());
                 Set(window, "_externalFrame", await desktop.CaptureAsync(desktop.Target, default));
                 Set(window, "_externalCalibration", new BoardCalibration(40, 40, 440, 490, flipped));
                 Set(window, "_externalPositionReady", true);

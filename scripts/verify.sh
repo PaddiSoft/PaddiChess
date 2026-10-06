@@ -38,6 +38,7 @@ assets = {
     'Pikafish.2026-09-25/Pikafish-Windows-x86-64-universal.exe': 1024 * 1024,
     'Pikafish.2026-09-25/pikafish.nnue': 1024 * 1024,
     'PaddiChess/Assets/Ocr/ch_PP-OCRv5_rec_mobile.onnx': 1024 * 1024,
+    'PaddiChess/Assets/Recognition/xiangqi-nano-v3.onnx': 1024 * 1024,
     'PaddiChess.Tests/Fixtures/web-default-opening.png': 1024,
     'PaddiChess.Tests/Fixtures/jj-wechat-midgame-1.png': 1024,
 }
@@ -50,6 +51,9 @@ if missing:
 model = Path('PaddiChess/Assets/Ocr/ch_PP-OCRv5_rec_mobile.onnx')
 if hashlib.sha256(model.read_bytes()).hexdigest() != '5825fc7ebf84ae7a412be049820b4d86d77620f204a041697b0494669b1742c5':
     raise SystemExit('OCR model checksum differs from Assets/Ocr/SOURCE.md; review the model before verification.')
+classifier = Path('PaddiChess/Assets/Recognition/xiangqi-nano-v3.onnx')
+if hashlib.sha256(classifier.read_bytes()).hexdigest() != 'da66ba9809f15127f8ae729b1755e42ee61c100c4f9979ce0ef13602ac471298':
+    raise SystemExit('Board classifier checksum differs from Assets/Recognition/SOURCE.md.')
 PY
 chmod +x "$engine_binary"
 

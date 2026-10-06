@@ -22,6 +22,7 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <Content Include="Fixtures/*.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Fixtures/recognition-cases.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

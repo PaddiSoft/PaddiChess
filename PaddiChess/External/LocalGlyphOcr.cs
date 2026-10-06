@@ -53,7 +53,18 @@ public static class LocalGlyphOcr
         finally { Gate.Release(); }
     }
 
-    private static ReadResult Read(CapturedPixels pixels, BoardCalibration geometry, CancellationToken ct)
+    /// <summary>Supplement only unresolved display squares; never rescan a confirmed board.</summary>
+    public static async Task<ReadResult> ReadCellsAsync(CapturedPixels pixels, BoardCalibration geometry,
+        IReadOnlyCollection<int> displayIndices, CancellationToken ct)
+    {
+        var requested = displayIndices.ToHashSet();
+        if (requested.Any(i => i is < 0 or >= 90)) throw new ArgumentOutOfRangeException(nameof(displayIndices));
+        await Gate.WaitAsync(ct).ConfigureAwait(false);
+        try { return await Task.Run(() => Read(pixels, geometry, ct, requested), ct).ConfigureAwait(false); }
+        finally { Gate.Release(); }
+    }
+
+    private static ReadResult Read(CapturedPixels pixels, BoardCalibration geometry, CancellationToken ct, HashSet<int>? requested = null)
     {
         var timer = Stopwatch.StartNew();
         ct.ThrowIfCancellationRequested();
@@ -79,9 +90,9 @@ public static class LocalGlyphOcr
         // centre jitter handles a pixel of segmentation error after downscaling.
         for (int variant = 0; variant < 33; variant++)
         {
-            var indices = Enumerable.Range(0, 90).Where(i => variant == 0 ||
+            var indices = Enumerable.Range(0, 90).Where(i => (requested == null || requested.Contains(i)) && (variant == 0 ||
                 !IsReliable(results[i]) && (variant >= 4 ? PieceSilhouette.HasDisc(discRays[i]) :
-                    !(plainGrid[i] && IsGridText(results[i]) && !PieceSilhouette.HasDisc(discRays[i])))).ToArray();
+                    !(plainGrid[i] && IsGridText(results[i]) && !PieceSilhouette.HasDisc(discRays[i]))))).ToArray();
             var pending = new Dictionary<string, Prepared>();
             void Accept(int index, Glyph glyph)
             {

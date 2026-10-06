@@ -26,7 +26,7 @@ flowchart TD
 | --- | --- | --- |
 | `PaddiChess/Core` | 棋局、基本合法走法、FEN、棋谱、历史 | 无其他业务层与 Avalonia 依赖 |
 | `PaddiChess/Engine` | UCI 进程、能力协商、规则客户端、模型 API、搜索预算 | 仅依赖 Core，不读取控件 |
-| `PaddiChess/External` | 捕获、输入、像素、定位、样式、OCR、合法后继 | 依赖 Core、SkiaSharp、ONNX Runtime，不引用 Avalonia |
+| `PaddiChess/External` | 捕获、输入、像素、定位、样式、棋子分类、OCR、合法后继 | 依赖 Core、SkiaSharp、ONNX Runtime，不引用 Avalonia |
 | `PaddiChess/Services` | 偏好、异步保存、棋谱存储、接管历史、声音 | 依赖 Core / Engine，不创建视图 |
 | `PaddiChess/Sessions` | 同步状态机、后台识别、输入核验和控制方决策 | 依赖 Core / Engine / External，不持有控件 |
 | `PaddiChess/Views` | AXAML、页面事件、窗口生命周期和交互调度 | 承接 UI，调用业务服务 |
@@ -52,7 +52,7 @@ flowchart TD
 | `Sessions/ExternalInputVerification.cs` | 发送前独立棋子身份核验 |
 | `Sessions/ExternalRecognitionRefresh.cs` | 后台完整识别与请求身份 |
 | `External/ExternalDesktop.cs` | 平台接口与 macOS／Windows 后端 |
-| `External/ExternalPositionRecognizer.cs` | 样式和 OCR 识别入口 |
+| `External/ExternalPositionRecognizer.cs` | 象棋专用模型与局部 OCR 补识入口 |
 | `External/ExternalMoveConfirmation.cs` | 稳定落点确认 |
 | `External/ExternalMoveRecovery.cs` | 近期错误匹配的恢复检查点 |
 | `Services/ExternalHistoryStore.cs` | 有界串行日志、原子棋谱快照与历史读取 |

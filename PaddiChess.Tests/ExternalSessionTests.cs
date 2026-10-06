@@ -37,7 +37,7 @@ public partial class ExternalSessionTests
                 window.FindControl<NumericUpDown>("DepthBox")!.Value=3;
                 window.FindControl<NumericUpDown>("ThinkBox")!.Value=1;
                 window.FindControl<CheckBox>("AutoAnalyzeCheck")!.IsChecked=false;
-                Set(window,"_externalDesktop",fake);
+                Set(window,"_externalDesktop",fake); Set(window, "_positionRecognizer", new SyntheticPositionRecognizer());
                 Set(window,"_externalFrame",await fake.CaptureAsync(fake.Target,CancellationToken.None));
                 Set(window,"_externalCalibration",new BoardCalibration(40,40,440,490,false));
                 Set(window,"_externalPositionReady",true);
@@ -133,7 +133,7 @@ public partial class ExternalSessionTests
             var window=new MainWindow(); var desktop=new FakeDesktop {Permissions=new(false,false)};
             try
             {
-                window.Show();Set(window,"_externalDesktop",desktop);
+                window.Show();Set(window,"_externalDesktop",desktop); Set(window, "_positionRecognizer", new SyntheticPositionRecognizer());
                 window.FindControl<CheckBox>("AutoAnalyzeCheck")!.IsChecked=false;
                 window.FindControl<TabControl>("MainTabs")!.SelectedIndex=3;
                 Assert.True(window.FindControl<Border>("ExternalPermissionGate")!.IsVisible);
@@ -234,7 +234,7 @@ public partial class ExternalSessionTests
                 window.FindControl<CheckBox>("DepthLimitCheck")!.IsChecked = true;
                 window.FindControl<NumericUpDown>("DepthBox")!.Value=2;
                 window.FindControl<NumericUpDown>("ThinkBox")!.Value=1;
-                Set(window,"_externalDesktop",desktop);
+                Set(window,"_externalDesktop",desktop); Set(window, "_positionRecognizer", new SyntheticPositionRecognizer());
                 Set(window,"_externalFrame",await desktop.CaptureAsync(desktop.Target,default));
                 Set(window,"_externalCalibration",new BoardCalibration(40,40,440,490,false));
                 Set(window,"_externalPositionReady",true);
