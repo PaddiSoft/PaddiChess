@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > **Paddi象棋永久免费。作者不销售付费版，谨防冒充官方的收费版本。**
 >
-> 如果你觉得好用，可以 **[❤️ 给作者一点小小的赞助心意](https://paddisoft.com/embed/creators/paddi)**。
+> 如果你觉得好用，可以 **[❤️ 给作者一点小小的赞助心意](https://paddisoft.com/creators/paddi#creator-support-title)**。
 >
 > 赞助完全自愿，不影响功能使用。
 

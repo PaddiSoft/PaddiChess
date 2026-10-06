@@ -14,7 +14,7 @@
 
 切换工作区保留棋局和已配置选项。分栏可调整宽度；外部工作台把棋谱和分析并排放置，核心控制无需多级菜单。
 
-应用永久免费；顶部的赞助按钮会在浏览器打开[作者赞助页](https://paddisoft.com/embed/creators/paddi)。赞助完全自愿，不影响功能使用。
+应用永久免费；顶部的赞助按钮会在浏览器打开[作者赞助页](https://paddisoft.com/creators/paddi#creator-support-title)。赞助完全自愿，不影响功能使用。
 
 ## 本地对弈
 
