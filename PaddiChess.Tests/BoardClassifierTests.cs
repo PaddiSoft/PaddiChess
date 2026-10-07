@@ -22,6 +22,7 @@ public class BoardClassifierTests
     [MemberData(nameof(Samples))]
     public async Task ProductionReaderDoesNotAcceptIncorrectIdentitiesAcrossReportedAndUnseenBoards(string id)
     {
+        await RecognitionAcceleration.PrepareAsync();
         var sample = Load(id);
         var pixels = CapturedPixels.DecodePng(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, sample.Path)));
         var frame = new ExternalFrame(new(1, 2, "regression", 0, 0, pixels.Width, pixels.Height), pixels);

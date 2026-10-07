@@ -2,7 +2,7 @@
 
 [文档目录](README.md) · [外部接管](external-takeover.md) · [性能](performance.md)
 
-## v1.0.3 的识别流程
+## 识别流程
 
 1. 定位棋盘的 9 列、10 行交点。仍可在同一核对窗口用两点重新定位；网格对齐与棋子识别是两个步骤。
 2. 按棋盘朝向裁切、归一化，由随包的象棋专用模型一次判断 90 个位置的棋子类型、阵营或空格。自动朝向使用将帅的位置核验，必要时再尝试旋转后的方向。
@@ -45,9 +45,38 @@
 
 这些是有限回归样本，部分已用于已有识别流程的开发，也包括重复缩放图，不能代表独立大样本评测或未见皮肤的 99.99% 保证。未知字体、低分辨率、动画、遮挡和错误网格仍可能导致不确定或误识别。Windows 包使用相同模型和预处理，但上述耗时来自 macOS，不能作为 Windows 实测值。
 
+## GPU / NPU 与 CPU 回退（v1.0.4）
+
+象棋专用模型与中文 OCR 均默认优先尝试加速，无需选择显卡品牌。接管控制区会分别显示两套模型的实际后端，悬停可查看准备／回退原因。
+
+| 平台与设备 | 使用方式 |
+| --- | --- |
+| Windows x64 NVIDIA / AMD / Intel 独显、核显、集显 | 随包 Windows ML 的 DirectML，要求驱动支持 DirectX 12；无需额外安装 CUDA 工具包 |
+| Windows x64 NPU | Windows 11 24H2（26100）及以上，通过 Windows ML 发现并注册**已安装、认证、架构匹配**的厂商执行提供程序；GPU 优先，之后尝试 NPU，再回退 CPU |
+| macOS Apple Silicon / Intel | CoreML；系统安排 GPU、Apple Neural Engine 或 CPU 执行，具体取决于硬件与算子支持 |
+| Linux / 无兼容设备 | 随包 CPU 后端 |
+
+Windows NPU 不是统一的 DirectML 显卡。Intel OpenVINO、AMD VitisAI、Qualcomm QNN 等需要相应提供程序、驱动和支持的模型。当前发布附件只有 Windows x64，没有 ARM64 原生包；不能保证所有 Copilot+ 或 Qualcomm 设备均可加速。本程序不会在连接棋盘时下载厂商运行库。只有 NPU 硬件但没有可用提供程序，或 FP32 模型算子不兼容时，会继续使用 GPU / CPU。
+
+加速成功的判定包含实际预热和算子执行记录，不能仅凭“枚举到了 GPU”显示加速成功。**混合加速**表示部分算子仍可由 CPU 执行；CoreML 不公开每个分区最终使用 GPU 还是 ANE，因此界面不会把它一律标作 NPU。短暂的预热剖析文件不含截图、棋谱或 API 设置，完成后删除。
+
+首次进入接管页即后台准备模型。CPU 会话先就绪，GPU / NPU 编译完成后在两次识别之间切换，避免等待设备编译才能连接。模型采用固定空间尺寸；OCR 同时预热单字和批量图，少量补识不再填满大批次。CPU 仍按实际字符数推理。预热会产生短时计算负载，速度取决于驱动；没有把所有平台都承诺为固定帧率。
+
+若设备初始化或运行失败，废弃该次加速输出，以**同一输入**在 CPU 重试；本次启动不再逐帧反复启用故障设备。普通取消不视为设备故障，不会改变连接和棋谱。排查驱动问题时，可设置环境变量 `PADDI_RECOGNITION_DEVICE=cpu` 后重新启动应用；移除变量即恢复自动加速。
+
+### 实测范围
+
+2026-10-08，Apple M3 / 24 GB，同一组 20 个固定网格输入、Release 构建，预热后分别运行纯 CPU 与 CoreML：20 个输入的专用模型棋子判断一致，最大置信度差约 `8.94e-7`。两者完整识别均为 19 / 20 张 FEN 正确、18 / 20 张自动通过，没有错误自动放行。
+
+完整识别入口单次回归中位数：CPU 约 **73 ms**，CoreML 混合约 **76 ms**；CoreML 范围约 60–870 ms，包含需要的局部 OCR，不含截图、定位、首次编译和引擎搜索。相较 v1.0.3 的约 177 ms，改善也来自固定形状和运行时优化，**不能把全部改善归因于 GPU**。小模型、碎片化算子和数据传输可能让 GPU 与 CPU 相近甚至更慢；本次没有改动模型权重、识别阈值或为皮肤添加分支。
+
+Windows CI 验证随包运行库、设备枚举、无 GPU 回退和真实棋盘样本；托管 CI 不等同于 NVIDIA / AMD / Intel 显卡或 NPU 实机性能测试。
+
+运行时依据：[Windows ML 部署](https://learn.microsoft.com/en-us/windows/ai/new-windows-ml/distributing-your-app)、[执行提供程序选择](https://learn.microsoft.com/en-us/windows/ai/new-windows-ml/select-execution-providers)、[CoreML 提供程序](https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html)。Windows 包固定使用 `Microsoft.Windows.AI.MachineLearning 2.1.74` 的原生运行库（ORT API 24）与 `Microsoft.ML.OnnxRuntime.Managed 1.24.4`；构建时校验随包三个 DLL 的 SHA-256，保留 NuGet 原许可。
+
 ## 本地运行与许可
 
-无需联网识别，也不把棋盘截图上传到 API 服务。模型只加载一次，在后台任务上使用 ONNX Runtime CPU 推理；取消可以中止当前推理。运行时校验模型 SHA-256。若专用模型文件损坏或不可加载，会尝试完整中文 OCR，使核对窗口仍可使用，此时会明显变慢；请重新安装完整发行包。
+无需联网识别，也不把棋盘截图上传到 API 服务。模型与推理会话复用；后台准备 GPU / NPU，设备不可用或推理失败时回退 CPU。取消请求不会禁用设备。运行时校验模型 SHA-256。若专用模型文件损坏或不可加载，会尝试完整中文 OCR，使核对窗口仍可使用，此时会明显变慢；请重新安装完整发行包。
 
 - [专用模型来源、固定版本、SHA-256 与 MIT 声明](../PaddiChess/Assets/Recognition/SOURCE.md)
 - [中文 OCR 来源与 Apache-2.0 声明](../PaddiChess/Assets/Ocr/SOURCE.md)

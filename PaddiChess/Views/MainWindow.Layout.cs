@@ -59,6 +59,7 @@ public partial class MainWindow
         // stay intact without creating a second set of score controls or bindings.
         if (scene == WorkspaceScene.External)
         {
+            EnsureRecognitionPrepared();
             if (!ReferenceEquals(ExternalReviewHost.Content, RecordPane))
             {
                 WorkspaceGrid.Children.Remove(RecordPane);

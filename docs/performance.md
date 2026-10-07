@@ -65,6 +65,8 @@
 
 ## GPU 与 NativeAOT
 
+棋盘专用识别模型和中文 OCR 已支持自动加速：Windows DirectML、macOS CoreML，以及 Windows 上兼容的已安装 NPU 提供程序。设备失败回退 CPU，后台预热时已有 CPU 会话继续识别。具体条件、混合推理含义及 CPU / GPU 对照数据见[识别加速说明](recognition.md#gpu--npu-与-cpu-回退v104)。GPU 不保证每种小批次都更快。
+
 随包 Pikafish 的搜索与 NNUE 推理使用 **CPU**，没有把 RTX 显卡用于该引擎执棋的开关。界面绘制、录屏或独立部署的本地模型可以有不同的 GPU 使用方式，不能与 Pikafish 搜索混为一谈。
 
 当前发布未开启 **NativeAOT**。Avalonia UI、托管启动和独立原生引擎属于不同性能范围；AOT 不会提高 Pikafish 算法本身的搜索能力。未来评估 AOT，需要分别验证包体、启动、内存、反射、JSON、ONNX 及跨平台发布兼容性。

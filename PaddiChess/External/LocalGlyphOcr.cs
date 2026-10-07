@@ -11,18 +11,18 @@ namespace PaddiXiangqi.External;
 public static class LocalGlyphOcr
 {
     public sealed record Glyph(string Text, double Confidence);
-    private sealed record Model(InferenceSession Session, string Input, string[] Characters);
+    private sealed record Model(InferenceModel Session, string[] Characters);
     private static readonly SemaphoreSlim Gate = new(1);
     private static readonly Lazy<Model> Instance = new(() =>
     {
         var file = Path.Combine(AppContext.BaseDirectory, "Assets", "Ocr", "ch_PP-OCRv5_rec_mobile.onnx");
-        using var options = new SessionOptions { IntraOpNumThreads = 2, InterOpNumThreads = 1,
-            GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL };
-        var session = new InferenceSession(file, options);
-        if (!session.ModelMetadata.CustomMetadataMap.TryGetValue("character", out var dictionary))
+        var session = InferenceModel.Open("中文 OCR", file, [8, 3, 48, 160]);
+        if (!session.Metadata.TryGetValue("character", out var dictionary))
         { session.Dispose(); throw new IOException("识字模型缺少中文字典，请重新安装完整客户端。"); }
-        return new(session, session.InputMetadata.Keys.First(), ["", ..dictionary.Split('\n'), " "]);
+        return new(session, ["", ..dictionary.Split('\n'), " "]);
     });
+
+    public static Task PrepareAsync() => Instance.Value.Session.PrepareAsync();
 
     public sealed record ReadResult(Glyph[] Glyphs, int InferenceCells, int ReusedCells, int Batches, double ElapsedMs)
     {
@@ -104,17 +104,15 @@ public static class LocalGlyphOcr
                 if (pending.Count == 0) return;
                 ct.ThrowIfCancellationRequested();
                 var batch = pending.ToArray();
+                // The device session pads GPU batches for static compilation. CPU
+                // inference only processes real rows; padding is never decoded.
                 var tensor = new DenseTensor<float>(new[] { batch.Length, 3, 48, 160 });
                 for (int i = 0; i < batch.Length; i++)
                     batch[i].Value.Input.CopyTo(tensor.Buffer.Span.Slice(i * 3 * 48 * 160));
-                using var options = new RunOptions();
-                using var cancel = ct.Register(() => options.Terminate = true);
-                try
+                var inferenceStart = Stopwatch.GetTimestamp();
+                model.Session.Run(tensor, predictions =>
                 {
-                    var inferenceStart = Stopwatch.GetTimestamp();
-                    using var output = model.Session.Run([NamedOnnxValue.CreateFromTensor(model.Input, tensor)], model.Session.OutputMetadata.Keys.ToArray(), options);
                     nativeInferenceMs += Stopwatch.GetElapsedTime(inferenceStart).TotalMilliseconds;
-                    var predictions = output.First().AsTensor<float>();
                     int steps = predictions.Dimensions[1], classes = predictions.Dimensions[2];
                     if (classes != model.Characters.Length) throw new IOException("识字模型与中文字典不匹配。");
                     ReadOnlySpan<float> values = predictions is DenseTensor<float> dense ? dense.Buffer.Span : predictions.ToArray();
@@ -136,8 +134,8 @@ public static class LocalGlyphOcr
                         if (cache.Count < 256) cache[batch[i].Key] = new(batch[i].Value.Input, glyph);
                     }
                     inferenceCells += batch.Length; batches++;
-                }
-                catch (OnnxRuntimeException) when (ct.IsCancellationRequested) { throw new OperationCanceledException(ct); }
+                    return 0;
+                }, ct);
                 pending.Clear();
             }
             foreach (int index in indices)

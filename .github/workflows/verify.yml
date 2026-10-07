@@ -13,6 +13,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  windows-recognition:
+    name: Windows · inference runtime and fallback
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install pinned native compiler
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://ziglang.org/download/0.13.0/zig-windows-x86_64-0.13.0.zip' -OutFile "$env:RUNNER_TEMP/zig.zip"
+          if ((Get-FileHash "$env:RUNNER_TEMP/zig.zip" -Algorithm SHA256).Hash -ne 'd859994725ef9402381e557c60bb57497215682e355204d754ee3df75ee3c158') { throw 'Zig checksum mismatch' }
+          Expand-Archive "$env:RUNNER_TEMP/zig.zip" "$env:RUNNER_TEMP/zig"
+          "$env:RUNNER_TEMP/zig/zig-windows-x86_64-0.13.0" | Out-File -FilePath $env:GITHUB_PATH -Append
+      - name: Verify Windows runtime and real recognition samples
+        shell: pwsh
+        run: |
+          dotnet restore PaddiChess.Tests/PaddiChess.Tests.csproj -p:RuntimeIdentifier=win-x64 --locked-mode
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          dotnet test PaddiChess.Tests/PaddiChess.Tests.csproj -c Release -r win-x64 --no-restore --filter "FullyQualifiedName~InferenceRuntimeTests|FullyQualifiedName~InferenceModelTests|FullyQualifiedName~BoardClassifierTests" --logger "trx;LogFileName=windows-recognition.trx" --results-directory artifacts/verification/windows
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-recognition-evidence
+          path: artifacts/verification/windows
+          retention-days: 14
   macos-regression:
     name: macOS · locked dependencies and regression
     runs-on: macos-14

@@ -432,6 +432,7 @@
                   </Border>
                   <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                     <TextBlock x:Name="ExternalModelText" TextTrimming="CharacterEllipsis" FontSize="10" Foreground="#315DA4"/>
+                    <TextBlock x:Name="RecognitionDeviceText" Grid.Column="1" Text="识别加速：自动" MaxWidth="190" TextTrimming="CharacterEllipsis" FontSize="10" Foreground="#718096" VerticalAlignment="Center"/>
                     <TextBlock x:Name="ExternalMetricsText" Grid.Column="2" Text="截图 — · 识别 — · 0 手" FontSize="10" Foreground="#718096" VerticalAlignment="Center"/>
                   </Grid>
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">

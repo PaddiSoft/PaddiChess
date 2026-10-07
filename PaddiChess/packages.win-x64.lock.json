@@ -192,18 +192,10 @@
         "resolved": "3.0.1",
         "contentHash": "s/s20YTVY9r9TPfTrN5g8zPF1YhwxyqO6PxUkrYTGI2B+OGPe9AdajWZrLhFqXIvqIW23fnUE4+ztrUWNU1+9g=="
       },
-      "Microsoft.ML.OnnxRuntime": {
-        "type": "Transitive",
-        "resolved": "1.23.2",
-        "contentHash": "849xImRO0vxDH7DNlg/FAVGExKfjN1r2CIZevZGI5JQCoOj+0T23ShqPEgu5mLTwElot5X7V0qkO0jUz/yJZbA==",
-        "dependencies": {
-          "Microsoft.ML.OnnxRuntime.Managed": "1.23.2"
-        }
-      },
       "Microsoft.ML.OnnxRuntime.Managed": {
         "type": "Transitive",
-        "resolved": "1.23.2",
-        "contentHash": "HtlQuzmVrqhnkmwfmkQ+2re8xPxtVmeLRQaYSJ3pXfzKs4b36+yBfa/LnDuzfX1bGcyWn/McKxmbY87TCAmo1Q==",
+        "resolved": "1.24.4",
+        "contentHash": "e5jsEo0HcCKDMkuRsMSievKoMv10Odv4MGmxbCin8SEm4Pto1qTpwti47xRwMtk9I/zVvfAiFIWquOq/0+22DA==",
         "dependencies": {
           "System.Numerics.Tensors": "9.0.0"
         }
@@ -253,30 +245,30 @@
       "PaddiXiangqi.Engine": {
         "type": "Project",
         "dependencies": {
-          "PaddiXiangqi.Core": "[1.0.0, )"
+          "PaddiXiangqi.Core": "[1.0.4, )"
         }
       },
       "PaddiXiangqi.External": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.ML.OnnxRuntime": "[1.23.2, )",
-          "PaddiXiangqi.Core": "[1.0.0, )",
+          "Microsoft.ML.OnnxRuntime.Managed": "[1.24.4, )",
+          "PaddiXiangqi.Core": "[1.0.4, )",
           "SkiaSharp": "[3.119.4, )"
         }
       },
       "PaddiXiangqi.Services": {
         "type": "Project",
         "dependencies": {
-          "PaddiXiangqi.Core": "[1.0.0, )",
-          "PaddiXiangqi.Engine": "[1.0.0, )"
+          "PaddiXiangqi.Core": "[1.0.4, )",
+          "PaddiXiangqi.Engine": "[1.0.4, )"
         }
       },
       "PaddiXiangqi.Sessions": {
         "type": "Project",
         "dependencies": {
-          "PaddiXiangqi.Core": "[1.0.0, )",
-          "PaddiXiangqi.Engine": "[1.0.0, )",
-          "PaddiXiangqi.External": "[1.0.0, )"
+          "PaddiXiangqi.Core": "[1.0.4, )",
+          "PaddiXiangqi.Engine": "[1.0.4, )",
+          "PaddiXiangqi.External": "[1.0.4, )"
         }
       }
     },
@@ -308,14 +300,6 @@
         "type": "Transitive",
         "resolved": "8.3.1.3",
         "contentHash": "bx8CE8Js+XGX8PUxAHCBDEORt5aaBYtMN4Hr9QFs57Xithh6yjUyYqksizH6eRDhJkwsGI+SXWmPmMm8lZC9Pw=="
-      },
-      "Microsoft.ML.OnnxRuntime": {
-        "type": "Transitive",
-        "resolved": "1.23.2",
-        "contentHash": "849xImRO0vxDH7DNlg/FAVGExKfjN1r2CIZevZGI5JQCoOj+0T23ShqPEgu5mLTwElot5X7V0qkO0jUz/yJZbA==",
-        "dependencies": {
-          "Microsoft.ML.OnnxRuntime.Managed": "1.23.2"
-        }
       },
       "SkiaSharp.NativeAssets.Linux": {
         "type": "Transitive",

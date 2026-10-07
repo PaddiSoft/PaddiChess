@@ -487,45 +487,63 @@
   },
   {
     "package": "Microsoft.ML.OnnxRuntime.Managed",
-    "version": "1.23.2",
+    "version": "1.24.4",
     "declaration": "LICENSE.txt",
     "repository": {
       "type": "git",
       "url": "https://github.com/microsoft/onnxruntime",
-      "commit": "a83fc4d58cb48eb68890dd689f94f28288cf2278"
+      "commit": "2d924974ef147392ced8409d36bd6d2e7fcc8a74"
     },
     "notices": [
       {
-        "file": "NuGet/Microsoft.ML.OnnxRuntime.Managed-1.23.2/LICENSE.txt",
-        "source": "NuGet:Microsoft.ML.OnnxRuntime.Managed/1.23.2/LICENSE.txt",
+        "file": "NuGet/Microsoft.ML.OnnxRuntime.Managed-1.24.4/LICENSE.txt",
+        "source": "NuGet:Microsoft.ML.OnnxRuntime.Managed/1.24.4/LICENSE.txt",
         "sha256": "c250d6278f0b47a6439fb7592b08b58a55eb9f535aa49a1db63211c3f982b674"
       },
       {
-        "file": "NuGet/Microsoft.ML.OnnxRuntime.Managed-1.23.2/ThirdPartyNotices.txt",
-        "source": "NuGet:Microsoft.ML.OnnxRuntime.Managed/1.23.2/ThirdPartyNotices.txt",
-        "sha256": "e00f828e0a33de591a355ae6606d2625f5758da7d2c844db7821c9dd3e3647b6"
+        "file": "NuGet/Microsoft.ML.OnnxRuntime.Managed-1.24.4/ThirdPartyNotices.txt",
+        "source": "NuGet:Microsoft.ML.OnnxRuntime.Managed/1.24.4/ThirdPartyNotices.txt",
+        "sha256": "fb0af774b4d7cffc5b9d046f2aaeade2f37df2f80abf8033c95dfffcc77a8866"
       }
     ]
   },
   {
     "package": "Microsoft.ML.OnnxRuntime",
-    "version": "1.23.2",
+    "version": "1.24.4",
     "declaration": "LICENSE",
     "repository": {
       "type": "git",
       "url": "https://github.com/Microsoft/onnxruntime.git",
-      "commit": "a83fc4d58cb48eb68890dd689f94f28288cf2278"
+      "commit": "2d924974ef147392ced8409d36bd6d2e7fcc8a74"
     },
     "notices": [
       {
-        "file": "NuGet/Microsoft.ML.OnnxRuntime-1.23.2/LICENSE",
-        "source": "NuGet:Microsoft.ML.OnnxRuntime/1.23.2/LICENSE",
+        "file": "NuGet/Microsoft.ML.OnnxRuntime-1.24.4/LICENSE",
+        "source": "NuGet:Microsoft.ML.OnnxRuntime/1.24.4/LICENSE",
         "sha256": "c250d6278f0b47a6439fb7592b08b58a55eb9f535aa49a1db63211c3f982b674"
       },
       {
-        "file": "NuGet/Microsoft.ML.OnnxRuntime-1.23.2/ThirdPartyNotices.txt",
-        "source": "NuGet:Microsoft.ML.OnnxRuntime/1.23.2/ThirdPartyNotices.txt",
-        "sha256": "e00f828e0a33de591a355ae6606d2625f5758da7d2c844db7821c9dd3e3647b6"
+        "file": "NuGet/Microsoft.ML.OnnxRuntime-1.24.4/ThirdPartyNotices.txt",
+        "source": "NuGet:Microsoft.ML.OnnxRuntime/1.24.4/ThirdPartyNotices.txt",
+        "sha256": "fb0af774b4d7cffc5b9d046f2aaeade2f37df2f80abf8033c95dfffcc77a8866"
+      }
+    ]
+  },
+  {
+    "package": "Microsoft.Windows.AI.MachineLearning",
+    "version": "2.1.74",
+    "declaration": "license.txt",
+    "repository": {},
+    "notices": [
+      {
+        "file": "NuGet/Microsoft.Windows.AI.MachineLearning-2.1.74/ThirdPartyNotices.txt",
+        "source": "NuGet:Microsoft.Windows.AI.MachineLearning/2.1.74/ThirdPartyNotices.txt",
+        "sha256": "fb0af774b4d7cffc5b9d046f2aaeade2f37df2f80abf8033c95dfffcc77a8866"
+      },
+      {
+        "file": "NuGet/Microsoft.Windows.AI.MachineLearning-2.1.74/license.txt",
+        "source": "NuGet:Microsoft.Windows.AI.MachineLearning/2.1.74/license.txt",
+        "sha256": "66395f8cb219087fae2bd025010bd9076b736c14f03b48f20295471c0c376814"
       }
     ]
   },

@@ -8,7 +8,7 @@
       "PaddiXiangqi.Engine": {
         "type": "Project",
         "dependencies": {
-          "PaddiXiangqi.Core": "[1.0.0, )"
+          "PaddiXiangqi.Core": "[1.0.4, )"
         }
       }
     },

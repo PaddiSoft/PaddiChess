@@ -14,18 +14,16 @@ public static class LocalBoardClassifier
     public const double MinimumConfidence = .80;
     private const string Classes = ".xKABNRCPkabnrcp";
     private static readonly SemaphoreSlim Gate = new(1, 1);
-    private sealed record Model(InferenceSession Session, string Input);
-    private static readonly Lazy<Model> Instance = new(() =>
+    private static readonly Lazy<InferenceModel> Instance = new(() =>
     {
         var path = Path.Combine(AppContext.BaseDirectory, "Assets", "Recognition", "xiangqi-nano-v3.onnx");
         using (var file = File.OpenRead(path))
             if (!Convert.ToHexString(SHA256.HashData(file)).Equals(ModelSha256, StringComparison.OrdinalIgnoreCase))
                 throw new IOException("棋子识别模型校验失败，请重新安装完整客户端。");
-        using var options = new SessionOptions { IntraOpNumThreads = 2, InterOpNumThreads = 1,
-            GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL };
-        var session = new InferenceSession(path, options);
-        return new(session, session.InputMetadata.Keys.Single());
+        return InferenceModel.Open("棋子模型", path, [1, 3, 315, 280]);
     });
+
+    public static Task PrepareAsync() => Instance.Value.PrepareAsync();
 
     public sealed record Prediction(char[] Pieces, double[] Confidence, bool RedAtTop, bool[]? VisibleEmptyGrid = null)
     {
@@ -82,13 +80,8 @@ public static class LocalBoardClassifier
         var input = Preprocess(pixels, geometry, ct);
         var model = Instance.Value;
         ct.ThrowIfCancellationRequested();
-        using var run = new RunOptions();
-        using var registration = ct.Register(() => run.Terminate = true);
-        try
+        return model.Run(new DenseTensor<float>(input, [1, 3, 315, 280]), output =>
         {
-            using var result = model.Session.Run([NamedOnnxValue.CreateFromTensor(model.Input,
-                new DenseTensor<float>(input, [1, 3, 315, 280]))], model.Session.OutputMetadata.Keys.ToArray(), run);
-            var output = result.Single().AsTensor<float>();
             if (!output.Dimensions.SequenceEqual(new[] { 1, 90, 16 })) throw new IOException("棋子识别模型输出尺寸不匹配。");
             var pieces = new char[90]; var scores = new double[90]; var emptyGrid = new bool[90];
             for (var i = 0; i < 90; i++)
@@ -110,9 +103,8 @@ public static class LocalBoardClassifier
                             !PieceSilhouette.HasDisc(pixels, geometry, display);
                 }
             }
-            return new(pieces, scores, geometry.RedAtTop, emptyGrid);
-        }
-        catch (OnnxRuntimeException) when (ct.IsCancellationRequested) { throw new OperationCanceledException(ct); }
+            return new Prediction(pieces, scores, geometry.RedAtTop, emptyGrid);
+        }, ct);
     }
 
     private static bool IsUniformPatch(CapturedPixels pixels, BoardCalibration geometry, int display)

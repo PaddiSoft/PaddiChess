@@ -1,5 +1,11 @@
 # 工程架构
 
+## 识别运行时
+
+`External` 只依赖 ONNX Runtime 的托管接口；平台原生运行库由应用项目按发布 RID 选择。Windows 使用固定版本 Windows ML C API / DirectML，macOS / Linux 使用匹配的 ONNX Runtime 包，避免同包出现两套 `onnxruntime.dll`。
+
+`InferenceModel` 管理每个模型的 CPU 就绪会话、后台加速预热、请求间原子切换与故障回退。`OrtRecognitionSession` 管理输入形状、OCR 单字／批量会话、取消与预热剖析文件生命周期。`InferenceDevices` 和 `WindowsMlCatalog` 负责硬件发现；识别器本身不依赖 Avalonia，也不识别特定皮肤。前端仅低频读取 `RecognitionAcceleration` 状态。
+
 [文档目录](README.md) · [构建与测试](development.md)
 
 ## 解决方案与依赖

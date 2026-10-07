@@ -35,8 +35,9 @@ Package versions, repository commits and notice hashes: [dependencies.json](depe
 | Microsoft.Extensions.DependencyInjection.Abstractions | 8.0.0 | MIT | [LICENSE.TXT](NuGet/Microsoft.Extensions.DependencyInjection.Abstractions-8.0.0/LICENSE.TXT), [THIRD-PARTY-NOTICES.TXT](NuGet/Microsoft.Extensions.DependencyInjection.Abstractions-8.0.0/THIRD-PARTY-NOTICES.TXT) |
 | Microsoft.Extensions.Logging.Abstractions | 8.0.0 | MIT | [LICENSE.TXT](NuGet/Microsoft.Extensions.Logging.Abstractions-8.0.0/LICENSE.TXT), [THIRD-PARTY-NOTICES.TXT](NuGet/Microsoft.Extensions.Logging.Abstractions-8.0.0/THIRD-PARTY-NOTICES.TXT) |
 | Microsoft.IO.RecyclableMemoryStream | 3.0.1 | MIT | [RecyclableMemoryStream-LICENSE.txt](NuGet/Microsoft.IO.RecyclableMemoryStream-3.0.1/RecyclableMemoryStream-LICENSE.txt) |
-| Microsoft.ML.OnnxRuntime.Managed | 1.23.2 | LICENSE.txt | [LICENSE.txt](NuGet/Microsoft.ML.OnnxRuntime.Managed-1.23.2/LICENSE.txt), [ThirdPartyNotices.txt](NuGet/Microsoft.ML.OnnxRuntime.Managed-1.23.2/ThirdPartyNotices.txt) |
-| Microsoft.ML.OnnxRuntime | 1.23.2 | LICENSE | [LICENSE](NuGet/Microsoft.ML.OnnxRuntime-1.23.2/LICENSE), [ThirdPartyNotices.txt](NuGet/Microsoft.ML.OnnxRuntime-1.23.2/ThirdPartyNotices.txt) |
+| Microsoft.ML.OnnxRuntime.Managed | 1.24.4 | LICENSE.txt | [LICENSE.txt](NuGet/Microsoft.ML.OnnxRuntime.Managed-1.24.4/LICENSE.txt), [ThirdPartyNotices.txt](NuGet/Microsoft.ML.OnnxRuntime.Managed-1.24.4/ThirdPartyNotices.txt) |
+| Microsoft.ML.OnnxRuntime | 1.24.4 | LICENSE | [LICENSE](NuGet/Microsoft.ML.OnnxRuntime-1.24.4/LICENSE), [ThirdPartyNotices.txt](NuGet/Microsoft.ML.OnnxRuntime-1.24.4/ThirdPartyNotices.txt) |
+| Microsoft.Windows.AI.MachineLearning | 2.1.74 | license.txt | [ThirdPartyNotices.txt](NuGet/Microsoft.Windows.AI.MachineLearning-2.1.74/ThirdPartyNotices.txt), [license.txt](NuGet/Microsoft.Windows.AI.MachineLearning-2.1.74/license.txt) |
 | SkiaSharp.NativeAssets.Linux | 3.119.4 | MIT | [LICENSE.txt](NuGet/SkiaSharp.NativeAssets.Linux-3.119.4/LICENSE.txt), [THIRD-PARTY-NOTICES.txt](NuGet/SkiaSharp.NativeAssets.Linux-3.119.4/THIRD-PARTY-NOTICES.txt) |
 | SkiaSharp.NativeAssets.WebAssembly | 3.119.4 | MIT | [LICENSE.txt](NuGet/SkiaSharp.NativeAssets.WebAssembly-3.119.4/LICENSE.txt), [THIRD-PARTY-NOTICES.txt](NuGet/SkiaSharp.NativeAssets.WebAssembly-3.119.4/THIRD-PARTY-NOTICES.txt) |
 | SkiaSharp.NativeAssets.Win32 | 3.119.4 | MIT | [LICENSE.txt](NuGet/SkiaSharp.NativeAssets.Win32-3.119.4/LICENSE.txt), [THIRD-PARTY-NOTICES.txt](NuGet/SkiaSharp.NativeAssets.Win32-3.119.4/THIRD-PARTY-NOTICES.txt) |
@@ -60,5 +61,3 @@ sound assets, engine weights or downloaded engines. Those require their own prov
 
 Maintainers: after updating packages, run `dotnet restore`, then
 `python3 scripts/collect-dependency-licenses.py`; review and commit the changed notices.
-
-Xiangqi board classifier: see `Assets/Recognition/SOURCE.md`, the retained upstream MIT metadata and `LICENSE.txt`.

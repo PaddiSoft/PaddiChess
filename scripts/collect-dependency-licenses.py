@@ -37,6 +37,18 @@ def main() -> None:
         if hashlib.sha256((DEST / "Upstream" / filename).read_bytes()).hexdigest() != item["sha256"]:
             raise ValueError(f"Pinned upstream notice changed: {filename}")
     folders = [pathlib.Path(p) for p in assets["packageFolders"]]
+    # Self-contained WinML is consumed via its C API using PackageDownload. NuGet
+    # excludes those packages from libraries, so include their original notices too.
+    external = ET.parse(ROOT / "PaddiChess/PaddiChess.csproj")
+    for item in external.findall(".//PackageDownload"):
+        name, version = item.attrib["Include"], item.attrib["Version"].strip("[]")
+        relative = f"{name.lower()}/{version}"
+        package = next((p / relative for p in folders if (p / relative).is_dir()), None)
+        if package is None:
+            raise ValueError(f"Restore the Windows RID before collecting notices for {name}/{version}")
+        assets["libraries"][f"{name}/{version}"] = {
+            "type": "package", "path": relative,
+            "files": [p.relative_to(package).as_posix() for p in package.rglob("*") if p.is_file()]}
     records = []
     with tempfile.TemporaryDirectory(prefix="paddi-licenses-") as temporary:
         output = pathlib.Path(temporary)

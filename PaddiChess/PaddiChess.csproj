@@ -100,4 +100,23 @@
     </ItemGroup>
     <Delete Files="@(ExternalReleaseSymbols)" />
   </Target>
+  <ItemGroup Condition="!$(AssetRuntime.StartsWith('win-'))">
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.24.4" />
+  </ItemGroup>
+  <!-- Use the documented WinML C API with a self-contained native runtime.
+       PackageDownload avoids importing WinRT/WinUI build targets into Avalonia.
+       ORT API 24 is shared by this runtime and the pinned managed binding. -->
+  <ItemGroup Condition="$(AssetRuntime.StartsWith('win-'))">
+    <PackageDownload Include="Microsoft.Windows.AI.MachineLearning" Version="[2.1.74]" />
+    <WinMlLibrary Include="$(NuGetPackageRoot)microsoft.windows.ai.machinelearning/2.1.74/runtimes/win-x64/native/DirectML.dll" ExpectedHash="257c75b2f607940c986d0b96d9309a2c897e57ef3192b6c678d707c22d747611" />
+    <WinMlLibrary Include="$(NuGetPackageRoot)microsoft.windows.ai.machinelearning/2.1.74/runtimes/win-x64/native/Microsoft.Windows.AI.MachineLearning.dll" ExpectedHash="bbbb34415d8ce303f8a2a2c524c46bd749e21423ccabeb7d38c5fc7334a7848f" />
+    <WinMlLibrary Include="$(NuGetPackageRoot)microsoft.windows.ai.machinelearning/2.1.74/runtimes/win-x64/native/onnxruntime.dll" ExpectedHash="3cffeff2d7c25b247a814212baab70eb1f37d727335d4c813ed73785df80a794" />
+    <Content Include="@(WinMlLibrary)"
+             Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="VerifyWinMlRuntime" BeforeTargets="PrepareForBuild" Condition="$(AssetRuntime.StartsWith('win-'))">
+    <Error Condition="'$(AssetRuntime)' != 'win-x64'" Text="The bundled Windows inference runtime currently supports win-x64 only." />
+    <GetFileHash Files="@(WinMlLibrary)" Algorithm="SHA256"><Output TaskParameter="Items" ItemName="VerifiedWinMlLibrary" /></GetFileHash>
+    <Error Condition="'%(VerifiedWinMlLibrary.FileHash)' != '%(VerifiedWinMlLibrary.ExpectedHash)'" Text="WinML runtime checksum mismatch: %(VerifiedWinMlLibrary.Filename)" />
+  </Target>
 </Project>

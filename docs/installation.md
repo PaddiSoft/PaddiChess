@@ -15,6 +15,8 @@
 
 发布包自带 .NET 运行时、本机引擎、NNUE、原生规则组件、象棋识别模型和 OCR 模型。完整解压，保留目录结构；不要只复制 `.exe` 或应用包内主程序。CPU 架构应与发布目标匹配。Linux 外部接管尚未实现；Intel 与 Linux 是否提供本次预构建附件，以 Release 为准。
 
+Windows 版要求 Windows 10 1903（18362）或更新系统。包内 `onnxruntime.dll`、`DirectML.dll` 与 `Microsoft.Windows.AI.MachineLearning.dll` 是一套匹配的识别运行库，请勿混用旧版 DLL。GPU 自动检测，无需安装 CUDA；NPU 的厂商提供程序要求 Windows 11 24H2 或更高，缺少或不兼容时仍可用 GPU / CPU。
+
 交叉编译结果不等于完整系统兼容性矩阵。Windows 的 GDI、DPI 和输入路径需要在 Windows 实际验证；macOS 原生桥接构建目标也不代表所有旧系统均已实测。
 
 ## macOS
