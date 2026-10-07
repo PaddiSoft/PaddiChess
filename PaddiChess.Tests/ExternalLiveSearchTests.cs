@@ -47,7 +47,11 @@ public partial class ExternalSessionTests
                 var game = Get<XiangqiGame>(window, "_game");
                 Assert.True(desktop.Game.TryMoveUci("e3e4", out _));
                 var clock = Stopwatch.StartNew();
-                while (game.Ply < 1 && clock.ElapsedMilliseconds < 400) await Task.Delay(10);
+                // Assert progress well before the 30-second search completes.
+                // A shared CI runner can suspend this test for over 400 ms;
+                // report latency separately from the concurrency assertion.
+                var observationBudget = TimeSpan.FromSeconds(5);
+                while (game.Ply < 1 && clock.Elapsed < observationBudget) await Task.Delay(10);
                 _latencyOutput.WriteLine($"Move during active search confirmed: {clock.Elapsed.TotalMilliseconds:F1} ms; flipped={flipped}");
                 Assert.Equal(1, game.Ply);
                 Assert.False(game.RedToMove);
@@ -55,7 +59,7 @@ public partial class ExternalSessionTests
                 Assert.Equal(0, desktop.InputCount);
                 Assert.True(desktop.Game.TryMoveUci("h9g7", out _));
                 clock.Restart();
-                while (game.Ply < 2 && clock.ElapsedMilliseconds < 400) await Task.Delay(10);
+                while (game.Ply < 2 && clock.Elapsed < observationBudget) await Task.Delay(10);
                 _latencyOutput.WriteLine($"Reply after stale search cancelled: {clock.Elapsed.TotalMilliseconds:F1} ms; flipped={flipped}");
                 Assert.Equal(2, game.Ply);
                 Assert.Equal(desktop.Game.CurrentFen(), game.CurrentFen());
