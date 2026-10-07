@@ -41,6 +41,8 @@ finally {
 
 # Include the complete corresponding helper source and licence, with portable
 # UTF-8 ZIP names. Never include binaries, caches or local filesystem metadata.
+# Windows PowerShell 5.1 does not load ZipArchiveMode transitively from FileSystem.
+Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archivePath = Join-Path $herePath 'bin/PikafishRules-source.zip'
 $temporaryArchive = Join-Path $herePath "bin/PikafishRules-source.$PID.tmp.zip"
