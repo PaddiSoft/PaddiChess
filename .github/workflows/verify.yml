@@ -61,7 +61,20 @@ jobs:
       - name: Check publication hygiene
         run: python3 scripts/audit-publication.py
       - name: Verify complete solution
+        # Keep full-board OCR correctness and UI scheduling tests independent
+        # of a hosted VM's CoreML partitions. Test auto selection separately
+        # in a fresh process below; both CPU and automatic paths are required.
+        env:
+          PADDI_RECOGNITION_DEVICE: cpu
         run: bash scripts/verify.sh
+      - name: Verify automatic inference and real recognition samples
+        env:
+          PADDI_RECOGNITION_DEVICE: auto
+        run: >-
+          dotnet test PaddiChess.Tests/PaddiChess.Tests.csproj -c Release --no-build --no-restore
+          --filter 'FullyQualifiedName~InferenceRuntimeTests|FullyQualifiedName~InferenceModelTests|FullyQualifiedName~BoardClassifierTests'
+          --logger 'trx;LogFileName=macos-auto-recognition.trx'
+          --results-directory artifacts/verification/macos-auto
       - name: Upload regression evidence
         if: always()
         uses: actions/upload-artifact@v4
