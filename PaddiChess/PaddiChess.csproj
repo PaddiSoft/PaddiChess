@@ -101,7 +101,9 @@
     <Delete Files="@(ExternalReleaseSymbols)" />
   </Target>
   <ItemGroup Condition="!$(AssetRuntime.StartsWith('win-'))">
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.24.4" />
+    <!-- Native assets are selected by RID. The upstream desktop build props
+         also copy Windows DLLs based only on CPU architecture, even on macOS. -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.24.4" ExcludeAssets="build;buildTransitive" />
   </ItemGroup>
   <!-- Use the documented WinML C API with a self-contained native runtime.
        PackageDownload avoids importing WinRT/WinUI build targets into Avalonia.
