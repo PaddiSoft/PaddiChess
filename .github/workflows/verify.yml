@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   windows-recognition:
-    name: Windows · inference runtime and fallback
+    name: Windows · inference, takeover and native input
     runs-on: windows-latest
     timeout-minutes: 25
     steps:
@@ -35,6 +35,14 @@ jobs:
           dotnet restore PaddiChess.Tests/PaddiChess.Tests.csproj -p:RuntimeIdentifier=win-x64 --locked-mode
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           dotnet test PaddiChess.Tests/PaddiChess.Tests.csproj -c Release -r win-x64 --no-restore --filter "FullyQualifiedName~InferenceRuntimeTests|FullyQualifiedName~InferenceModelTests|FullyQualifiedName~BoardClassifierTests" --logger "trx;LogFileName=windows-recognition.trx" --results-directory artifacts/verification/windows
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Verify takeover and owned Windows input
+        shell: pwsh
+        env:
+          PADDI_RECOGNITION_DEVICE: cpu
+          PADDI_TEST_NATIVE_INPUT: '1'
+        run: |
+          dotnet test PaddiChess.Tests/PaddiChess.Tests.csproj -c Release -r win-x64 --no-build --no-restore --filter "FullyQualifiedName~ExternalSessionTests|FullyQualifiedName~ExternalInput|FullyQualifiedName~ExternalClick|FullyQualifiedName~RecognitionRefreshTests|FullyQualifiedName~WindowsCaptureIntegrationTests" --logger "trx;LogFileName=windows-takeover.trx" --results-directory artifacts/verification/windows
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         if: always()

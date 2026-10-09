@@ -495,7 +495,7 @@ case "recognize-clocks":
 case "capture-server", "capture-server-raw":
     if #available(macOS 14.0, *) { captureServer(raw:args[1] == "capture-server-raw") } else { fail("持续截图需要 macOS 14 或更新系统") }
 case "permissions":
-    let result = ["screenCapture":CGPreflightScreenCaptureAccess(), "accessibility":AXIsProcessTrusted()]
+    let result = ["screenCapture":CGPreflightScreenCaptureAccess(), "accessibility":AXIsProcessTrusted() && CGPreflightPostEventAccess()]
     print(String(data:try JSONSerialization.data(withJSONObject:result),encoding:.utf8)!)
 case "request-screen":
     if !CGPreflightScreenCaptureAccess() {
@@ -531,7 +531,8 @@ case "move":
     let nums=args[3...10].compactMap(Double.init)
     guard nums.count==8 else { fail("坐标无效") }
     guard abs(target.x-nums[0])<1, abs(target.y-nums[1])<1, abs(target.width-nums[2])<1, abs(target.height-nums[3])<1 else { fail("窗口位置或大小改变，请重新标定") }
-    guard AXIsProcessTrusted() else { fail("permission:accessibility") }
+    guard AXIsProcessTrusted() && CGPreflightPostEventAccess() else { fail("permission:accessibility") }
+    if args.count >= 12 && args[11] == "finish-click" { inputStarted = true }
     let focusedWindow = args.count == 13 && args[12] == "window-focused"
     let directed = args.count == 13 && (args[12] == "window" || focusedWindow)
     if directed && windowLocationSetter == nil { inputBlocked("当前系统不支持窗口内鼠标坐标，请选择系统鼠标输入。") }
@@ -590,11 +591,12 @@ case "move":
     verifyVisible(CGPoint(x:nums[6],y:nums[7]),target:target)
     if directed && !focusedWindow { prepareBackgroundInput(target) }
     let dragging = args.count >= 12 && args[11] == "drag"
+    let finishSelection = args.count >= 12 && args[11] == "finish-click"
     var mouseHeld = false
     defer {
         if mouseHeld { postMouse(.leftMouseUp,CGPoint(x:nums[6],y:nums[7])) }
     }
-    for i in [4,6] {
+    for i in (finishSelection ? [6] : [4,6]) {
         let point=CGPoint(x:nums[i], y:nums[i+1])
         verifyVisible(point,target:target)
         if directed && (!dragging || i == 4) { prepareDirectedPointer(point,target:target) }
@@ -619,14 +621,17 @@ case "move":
             heldPoint = point
             inputStarted = true
             postMouse(.leftMouseDown,point)
-            if directed { waitForInput(0.035) }
+            waitForInput(directed ? 0.075 : 0.060)
             postMouse(.leftMouseUp,point)
             heldPoint = nil
         }
         // Keep the source-selection interval for games and mirrored-device input;
-        // the GUI keeps observing throughout, and no post-destination sleep is needed.
+        // the GUI keeps observing throughout this pacing interval.
         if i == 4 { waitForInput(0.18) }
     }
+    // Keep the temporary context alive while a throttled background game
+    // consumes the destination up event. Immediate deactivation can discard it.
+    if directed && !focusedWindow { waitForInput(0.15) }
     restoreBackgroundInput()
     print("ok")
 default: fail("未知操作")

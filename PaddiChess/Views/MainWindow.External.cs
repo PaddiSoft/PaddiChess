@@ -442,9 +442,18 @@ public partial class MainWindow
         using var inputLifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
         using var warmupLifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
         await using var recognitionRefresh = new ExternalRecognitionRefresh(ct);
-        async Task<Exception?> SendInputAsync(double fx, double fy, double tx, double ty)
+        await using var inputVerification = new ExternalRecognitionRefresh(ct, TimeSpan.FromMilliseconds(250));
+        var inputRetry = new ExternalInputRetry();
+        string? lastVerificationStatus = null;
+        BoardObservation? submittedFrame = null;
+        async Task<Exception?> SendInputAsync(double fx, double fy, double tx, double ty, bool finishSelection = false)
         {
-            try { await desktop.MoveAsync(target, fx, fy, tx, ty, inputLifetime.Token); return null; }
+            try
+            {
+                if (finishSelection) await desktop.CompleteSelectedMoveAsync(target, fx, fy, tx, ty, inputLifetime.Token);
+                else await desktop.MoveAsync(target, fx, fy, tx, ty, inputLifetime.Token);
+                return null;
+            }
             catch (Exception ex) { return ex; } // Observed by the loop, including partial-input outcomes.
         }
         try
@@ -590,7 +599,7 @@ public partial class MainWindow
                     continue;
                 }
                 var recognitionIdentity = _game.StartFen + "|" + _game.UciMoveList;
-                var fullRead = recognitionRefresh.Current(recognitionIdentity, pending, observation);
+                var fullRead = await Task.Run(() => recognitionRefresh.Current(recognitionIdentity, pending, observation), ct);
                 var sync = await Task.Run(() => synchronization.Observe(observation, _externalTracker!,
                     _game, pending, inputTask != null, _externalSessionSkin, _externalMoveRecovery, sessionClock.Elapsed, fullRead), ct);
                 var match = sync.Match;
@@ -611,6 +620,7 @@ public partial class MainWindow
                 }
                 if (!sync.Confirmed)
                 {
+                    inputRetry.Invalidate();
                     if (!sync.Match.Recognized && synchronization.UnrecognizedSince is { } unresolved &&
                         sessionClock.Elapsed - unresolved >= TimeSpan.FromMilliseconds(500))
                     {
@@ -666,11 +676,40 @@ public partial class MainWindow
                 { ExternalStatusText.Text = $"已同步 {_game.Ply} 手 · 正在完成落子操作…"; continue; }
                 if (pending != null)
                 {
+                    // A successfully posted event is not proof that the game handled
+                    // it. Complete the same source selection only in this live session,
+                    // after two fresh, independently verified unchanged observations.
+                    // A move/reply/uncertain image resets the gate. Resume never
+                    // blindly replays an old partial submission.
+                    var retryRead = await Task.Run(() => inputVerification.Current(recognitionIdentity, null, observation), ct);
+                    var verifiedUnchanged = retryRead is { Confident: true } &&
+                        ExternalPositionRecovery.SamePieces(retryRead.Fen, _game.CurrentFen());
+                    Square.TryParseUci(pending[..2], out var selectedSource);
+                    var sourceChanged = submittedFrame != null &&
+                        ExternalInputRetry.HasSelectionEvidence(submittedFrame, observation, selectedSource);
+                    if (!verifiedUnchanged || !sourceChanged) inputRetry.Invalidate();
+                    else if (desktop.CanCompleteSelectedMove && desktop.InputMode == ExternalInputMode.Click &&
+                        _externalRunning && lastInputDecision is { } intent && intent.Move == pending &&
+                        intent.Fen == _game.CurrentFen() && intent.RuleHistory == _game.UciMoveList &&
+                        intent.RuleStartFen == _game.StartFen && decisionConfiguration == _externalActiveConfiguration &&
+                        DateTimeOffset.UtcNow >= inputRetryAfter && inputRetry.ObserveUnchanged(sessionClock.Elapsed))
+                    {
+                        Square.TryParseUci(pending[..2], out var retryFrom); Square.TryParseUci(pending[2..], out var retryTo);
+                        var start = calibration.Point(retryFrom); var end = calibration.Point(retryTo);
+                        var a = ExternalCaptureGeometry.ToWindowPoint(start.X, start.Y, observation.Width, observation.Height, target);
+                        var b = ExternalCaptureGeometry.ToWindowPoint(end.X, end.Y, observation.Width, observation.Height, target);
+                        inputRetry.Submitted(sessionClock.Elapsed, retry: true);
+                        inputTask = SendInputAsync(a.X, a.Y, b.X, b.Y, finishSelection: true);
+                        await RecordExternalHistoryAsync("input-retry", $"确认起点仍被选中且棋盘未走动，补发终点 {inputRetry.Retries}/{ExternalInputRetry.MaximumRetries}", move: pending);
+                        ExternalStatusText.Text = $"目标尚未响应，正在重试落子（{inputRetry.Retries}/{ExternalInputRetry.MaximumRetries}）…";
+                        captureImmediately = true;
+                        continue;
+                    }
                     if (DateTimeOffset.UtcNow - moveSentAt > TimeSpan.FromSeconds(7))
                     {
                         ShowExternalRecovery(desktop.InputDelivery == ExternalInputDelivery.TargetWindow
-                            ? "后台窗口事件尚未获落子确认。若目标拒绝后台输入，请停止后选择“窗口事件 · 自动聚焦”，重新同步再继续；不会重复发送未确认的着法。"
-                            : "落子尚未确认，保留连接并持续核验，不重复点击；请检查目标窗口是否已落子。");
+                            ? "后台窗口未确认落子。请停止后选择“窗口事件 · 自动聚焦”并重新同步；棋谱已保留，已选中棋子的终点最多补发两次。"
+                            : "目标窗口未确认落子。请检查遮挡或权限后重新同步；棋谱已保留，已选中棋子的终点最多补发两次。");
                     }
                     else ExternalStatusText.Text = "已发送落子，等待截图确认…";
                     continue;
@@ -718,7 +757,11 @@ public partial class MainWindow
                     decisionTask = CalculateExternalDecisionAsync(engine, red, model, decisionCancellation.Token);
                     continue;
                 }
-                if (!decisionTask.IsCompleted) continue;
+                if (!decisionTask.IsCompleted)
+                {
+                    ExternalStatusText.Text = $"已同步 {_game.Ply} 手 · {(model?.Model ?? DefaultEngine.Name)} 正在计算…";
+                    continue;
+                }
                 var decision = await decisionTask;
                 decisionTask = null;
                 decisionCancellation?.Dispose(); decisionCancellation = null;
@@ -759,34 +802,48 @@ public partial class MainWindow
                 var beforeClick = await CaptureExternalWithRecoveryAsync(desktop, target, ct);
                 if (UpdateCaptureGeometry(beforeClick)) { captureImmediately = true; continue; }
                 var check = await observationReader.ReadAsync(beforeClick, ct);
+                // Full inference runs independently so observation, turn updates and
+                // engine completion cannot stall behind OCR. Bind the read to history
+                // and reclassify changed samples before authorizing this fresh frame.
                 var verificationIdentity = _game.StartFen + "|" + _game.UciMoveList;
                 var verificationSkin = _externalSessionSkin;
                 var verificationPath = (ExternalSkinBox.SelectedItem as SkinChoice)?.Path;
-                // Read all identities independently of the accepted pixel baseline.
-                // Otherwise a mistaken baseline can repeatedly confirm itself as unchanged.
-                var identityRead = await _positionRecognizer.ReadAsync(beforeClick, calibration,
-                    _game.RedToMove, ct, false, verificationSkin, verificationPath);
+                var identityRead = await Task.Run(() => inputVerification.Current(verificationIdentity, null, check), ct);
+                if (identityRead is not { Confident: true })
+                {
+                    var verificationGeometry = calibration;
+                    var verificationTurn = _game.RedToMove;
+                    inputVerification.TryStart(verificationIdentity, null, check, sessionClock.Elapsed,
+                        token => _positionRecognizer.ReadAsync(beforeClick, verificationGeometry, verificationTurn,
+                            token, false, verificationSkin, verificationPath));
+                    var status = identityRead is { Uncertain.Count: > 0 }
+                        ? $"计算已完成 · 正在核验 {identityRead.Uncertain.Count} 个不确定位置，暂未发送落子。"
+                        : "计算已完成 · 正在核验最新棋盘，核验后落子…";
+                    ExternalStatusText.Text = status;
+                    if (lastVerificationStatus != status)
+                    {
+                        lastVerificationStatus = status;
+                        await RecordExternalHistoryAsync("verification", status, move: chosen, observedFen: identityRead?.Fen);
+                    }
+                    continue;
+                }
                 var beforeInput = await Task.Run(() => ExternalInputVerification.Check(_externalTracker!, _game, check, identityRead), ct);
                 if (beforeInput is { Recognized: true, Moves.Count: 0 })
                 {
-                    // OCR may take longer than a target move. Capture again after it,
-                    // reuse only identical samples, and re-read changed pixels locally.
                     var latest = await CaptureExternalWithRecoveryAsync(desktop, target, ct);
                     if (UpdateCaptureGeometry(latest)) { captureImmediately = true; continue; }
-                    var latestCheck = await observationReader.ReadAsync(latest, ct);
-                    if (!ExternalRecognitionRefresh.SameSamples(check, latestCheck))
+                    check = await observationReader.ReadAsync(latest, ct);
+                    var latestRead = await Task.Run(() => inputVerification.Current(verificationIdentity, null, check), ct);
+                    if (latestRead is not { Confident: true })
                     {
-                        // The independent read belongs to beforeClick, not latest.
-                        // Let the observation loop reconcile the fresh board before
-                        // requesting another read; never downgrade to a template
-                        // or authorize a stale decision against different pixels.
-                        if (identityRead != null) recognitionRefresh.Seed(verificationIdentity, null, check, identityRead);
+                        ExternalStatusText.Text = "计算已完成 · 最新画面仍有变化，正在核验棋子…";
                         captureImmediately = true;
                         continue;
                     }
-                    check = latestCheck;
+                    identityRead = latestRead;
+                    beforeInput = await Task.Run(() => ExternalInputVerification.Check(_externalTracker!, _game, check, identityRead), ct);
                 }
-                if (identityRead != null) recognitionRefresh.Seed(verificationIdentity, null, check, identityRead);
+                recognitionRefresh.Seed(verificationIdentity, null, check, identityRead);
                 ct.ThrowIfCancellationRequested();
                 if (!_externalRunning || !_externalTurnKnown || _game.RedToMove != red ||
                     decision.Fen != _game.CurrentFen() || decision.RuleStartFen != _game.StartFen ||
@@ -796,7 +853,7 @@ public partial class MainWindow
                     // A confident conflict invalidates the decision. An inconclusive
                     // image only needs another verification, not another engine/API request.
                     pendingThought = null;
-                    if (identityRead is { Confident: true }) _externalPreparedDecision = null;
+                    // The normal observation loop invalidates this result when the confirmed history changes.
                     inputRetryAfter = DateTimeOffset.UtcNow.AddMilliseconds(200);
                     synchronization.RequireFreshObservation(sessionClock.Elapsed);
                     ShowExternalRecovery("落子前棋子核验未通过，已拦截本次落子；正在自动核验最新局面。");
@@ -809,13 +866,15 @@ public partial class MainWindow
                     }
                     continue;
                 }
-                lastBlockedEvent = null;
+                lastBlockedEvent = null; lastVerificationStatus = null;
                 Square.TryParseUci(chosen[..2], out var from); Square.TryParseUci(chosen[2..], out var to);
                 var source = calibration.Point(from); var dest = calibration.Point(to);
                 // Persist the pending move before input. A stop between the two clicks must not lead to a duplicate submission on resume.
                 _externalPendingMove = chosen; _externalPendingThought = pendingThought;
                 lastInputDecision = decision;
                 pending = chosen; submittedMove = chosen; moveSentAt = DateTimeOffset.UtcNow;
+                inputRetry.Submitted(sessionClock.Elapsed);
+                submittedFrame = check;
                 var sourcePoint = ExternalCaptureGeometry.ToWindowPoint(source.X, source.Y, check.Width, check.Height, target);
                 var destinationPoint = ExternalCaptureGeometry.ToWindowPoint(dest.X, dest.Y, check.Width, check.Height, target);
                 inputTask = SendInputAsync(sourcePoint.X, sourcePoint.Y, destinationPoint.X, destinationPoint.Y);

@@ -85,6 +85,9 @@ public interface IExternalDesktop
     Task<IReadOnlyList<ExternalWindow>> ListAsync(CancellationToken ct);
     Task<ExternalFrame> CaptureAsync(ExternalWindow window, CancellationToken ct);
     Task MoveAsync(ExternalWindow window, double fromX, double fromY, double toX, double toY, CancellationToken ct);
+    bool CanCompleteSelectedMove => false;
+    Task CompleteSelectedMoveAsync(ExternalWindow window, double fromX, double fromY, double toX, double toY, CancellationToken ct)
+        => throw new NotSupportedException("此输入方式不支持补发已选中棋子的终点。");
     bool EscapePressed();
     ExternalInputMode InputMode { get => ExternalInputMode.Click; set { } }
     ExternalInputDelivery InputDelivery { get => ExternalInputDelivery.SystemCursor; set { } }
@@ -103,6 +106,7 @@ public static class ExternalDesktop
 
 internal sealed class MacExternalDesktop : IExternalDesktop
 {
+    public bool CanCompleteSelectedMove => true;
     public ExternalInputMode InputMode { get; set; }
     public ExternalInputDelivery InputDelivery { get; set; }
     public async Task<ExternalPermissions> GetPermissionsAsync(CancellationToken ct) =>
@@ -241,7 +245,11 @@ internal sealed class MacExternalDesktop : IExternalDesktop
         }
         finally { if (File.Exists(path)) File.Delete(path); }
     }
-    public async Task MoveAsync(ExternalWindow window, double fromX, double fromY, double toX, double toY, CancellationToken ct)
+    public Task MoveAsync(ExternalWindow window, double fromX, double fromY, double toX, double toY, CancellationToken ct)
+        => MoveCoreAsync(window, fromX, fromY, toX, toY, ct, false);
+    public Task CompleteSelectedMoveAsync(ExternalWindow window, double fromX, double fromY, double toX, double toY, CancellationToken ct)
+        => MoveCoreAsync(window, fromX, fromY, toX, toY, ct, true);
+    private async Task MoveCoreAsync(ExternalWindow window, double fromX, double fromY, double toX, double toY, CancellationToken ct, bool finishSelection)
     {
         string F(double value) => value.ToString(CultureInfo.InvariantCulture);
         var forcedTermination = false;
@@ -250,7 +258,7 @@ internal sealed class MacExternalDesktop : IExternalDesktop
         try
         {
             await RunHelperAsync(ct, ["move", window.Id.ToString(), F(window.X), F(window.Y), F(window.Width), F(window.Height),
-                F(window.X + fromX), F(window.Y + fromY), F(window.X + toX), F(window.Y + toY), inputMode == ExternalInputMode.Drag ? "drag" : "click",
+                F(window.X + fromX), F(window.Y + fromY), F(window.X + toX), F(window.Y + toY), finishSelection ? "finish-click" : inputMode == ExternalInputMode.Drag ? "drag" : "click",
                 inputDelivery switch
                 {
                     ExternalInputDelivery.TargetWindow => "window",
@@ -313,6 +321,7 @@ internal sealed class MacExternalDesktop : IExternalDesktop
 
 internal sealed class WindowsExternalDesktop : IExternalDesktop
 {
+    public bool CanCompleteSelectedMove => true;
     private readonly SemaphoreSlim _captureGate = new(1, 1);
     private WindowCaptureSurface? _captureSurface;
     public ExternalInputMode InputMode { get; set; }
@@ -445,22 +454,39 @@ internal sealed class WindowsExternalDesktop : IExternalDesktop
         }
         public void Dispose() { if (previous != 0) SetThreadDpiAwarenessContext(previous); }
     }
-    public async Task MoveAsync(ExternalWindow window, double fromX, double fromY, double toX, double toY, CancellationToken ct)
+    public Task MoveAsync(ExternalWindow window, double fromX, double fromY, double toX, double toY, CancellationToken ct)
+        => MoveCoreAsync(window, fromX, fromY, toX, toY, ct, false);
+    public Task CompleteSelectedMoveAsync(ExternalWindow window, double fromX, double fromY, double toX, double toY, CancellationToken ct)
+        => MoveCoreAsync(window, fromX, fromY, toX, toY, ct, true);
+    private async Task MoveCoreAsync(ExternalWindow window, double fromX, double fromY, double toX, double toY, CancellationToken ct, bool finishSelection)
     {
         if (!window.SameBounds(Describe((nint)window.Id))) throw new InvalidOperationException("窗口位置或大小改变，请重新标定");
         if (GetForegroundWindow() != (nint)window.Id)
         {
-            if (!SetForegroundWindow((nint)window.Id)) throw new ExternalInputBlockedException(false, "目标棋盘尚未位于前台，正在等待窗口可操作。");
+            if (!SetForegroundWindow((nint)window.Id)) throw new ExternalInputBlockedException(finishSelection, "目标棋盘尚未位于前台，正在等待窗口可操作。");
             var activation = Stopwatch.StartNew();
             while (GetForegroundWindow() != (nint)window.Id && activation.ElapsedMilliseconds < 500)
                 await Task.Delay(20, ct);
             if (GetForegroundWindow() != (nint)window.Id)
-                throw new ExternalInputBlockedException(false, "目标棋盘尚未获得焦点，正在等待窗口可操作。");
+                throw new ExternalInputBlockedException(finishSelection, "目标棋盘尚未获得焦点，正在等待窗口可操作。");
             await Task.Delay(50, ct); // Let the target process its activation before selecting a piece.
         }
         var from = new Point((int)(window.X + fromX), (int)(window.Y + fromY));
         var to = new Point((int)(window.X + toX), (int)(window.Y + toY));
-        var inputStarted = false;
+        var inputStarted = finishSelection;
+        void Button(uint flags)
+        {
+            var events = new[] { new MouseInputEvent { Mouse = new MouseInput { Flags = flags } } };
+            if (SendInput(1, events, Marshal.SizeOf<MouseInputEvent>()) != 1)
+                throw new ExternalInputBlockedException(inputStarted,
+                    "Windows 未接受模拟输入，请确认目标与本程序权限级别一致，或退出目标的管理员模式。");
+        }
+        void MovePointer(Point point)
+        {
+            using var dpi = PhysicalPixelScope.Enter();
+            if (!SetCursorPos(point.X, point.Y))
+                throw new ExternalInputBlockedException(inputStarted, "Windows 无法移动到落点，请检查当前桌面是否可交互。");
+        }
         void Verify(Point point)
         {
             using var dpi = PhysicalPixelScope.Enter();
@@ -472,18 +498,19 @@ internal sealed class WindowsExternalDesktop : IExternalDesktop
         }
         // Both destinations must be usable before selecting or dragging a piece.
         Verify(from); Verify(to);
-        if (InputMode == ExternalInputMode.Drag)
+        if (InputMode == ExternalInputMode.Drag && !finishSelection)
         {
-            Verify(from); SetCursorPos(from.X, from.Y);
+            Verify(from); MovePointer(from);
+            await Task.Delay(50, ct); Verify(from);
+            Button(2);
             inputStarted = true;
-            mouse_event(2, 0, 0, 0, 0);
             var completed = false;
             try
             {
                 for (int i = 1; i <= 10; i++)
                 {
                     var point = new Point(from.X + (to.X - from.X) * i / 10, from.Y + (to.Y - from.Y) * i / 10);
-                    Verify(point); SetCursorPos(point.X, point.Y); await Task.Delay(18, ct);
+                    Verify(point); MovePointer(point); await Task.Delay(18, ct);
                 }
                 completed = true;
             }
@@ -501,17 +528,19 @@ internal sealed class WindowsExternalDesktop : IExternalDesktop
                     }
                     catch (InvalidOperationException) { }
                 }
-                mouse_event(4, 0, 0, 0, 0);
+                Button(4);
             }
         }
         else
         {
-            Verify(from); SetCursorPos(from.X, from.Y);
-            inputStarted = true;
-            mouse_event(2, 0, 0, 0, 0); mouse_event(4, 0, 0, 0, 0);
-            await Task.Delay(180, ct);
-            Verify(to); SetCursorPos(to.X, to.Y);
-            mouse_event(2, 0, 0, 0, 0); mouse_event(4, 0, 0, 0, 0);
+            if (!finishSelection)
+            {
+                await ExternalClickSequence.ClickAsync(() => MovePointer(from), () => Verify(from),
+                    () => { Button(2); inputStarted = true; }, () => Button(4), ct);
+                await Task.Delay(180, ct);
+            }
+            await ExternalClickSequence.ClickAsync(() => MovePointer(to), () => Verify(to),
+                () => Button(2), () => Button(4), ct);
             // Confirmation is driven by captured frames, not a fixed delay after the destination.
         }
     }
@@ -538,7 +567,12 @@ internal sealed class WindowsExternalDesktop : IExternalDesktop
     [DllImport("user32.dll")] private static extern nint WindowFromPoint(Point p);
     [DllImport("user32.dll")] private static extern nint GetAncestor(nint h, uint flags);
     [DllImport("user32.dll")] private static extern bool SetCursorPos(int x, int y);
-    [DllImport("user32.dll")] private static extern void mouse_event(uint flags, uint x, uint y, uint data, nuint extra);
+    // INPUT's union is MOUSEINPUT-sized; native alignment supplies the padding
+    // after Type on x64. Do not pack it to the x86 layout.
+    [StructLayout(LayoutKind.Sequential)] private struct MouseInputEvent { public uint Type; public MouseInput Mouse; }
+    [StructLayout(LayoutKind.Sequential)] private struct MouseInput
+    { public int X, Y; public uint Data, Flags, Time; public nuint ExtraInfo; }
+    [DllImport("user32.dll", SetLastError = true)] private static extern uint SendInput(uint count, [In] MouseInputEvent[] inputs, int size);
     [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int key);
     [DllImport("gdi32.dll")] private static extern nint CreateCompatibleDC(nint dc);
     [DllImport("gdi32.dll")] private static extern bool PatBlt(nint dc, int x, int y, int width, int height, uint operation);

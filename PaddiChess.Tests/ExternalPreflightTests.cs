@@ -369,6 +369,19 @@ public partial class ExternalSessionTests
         public int Captures { get; private set; }
         public int InputCount { get; private set; }
         public bool HoldInputs { get; set; }
+        public int IgnoreInputs { get; set; }
+        public bool SelectOnIgnoredInput { get; set; }
+        public bool PulseEveryCapture { get; set; }
+        public int CompletionAttempts { get; private set; }
+        public bool CanCompleteSelectedMove => true;
+        private Square? _selected;
+        public async Task CompleteSelectedMoveAsync(ExternalWindow target, double fx, double fy, double tx, double ty, CancellationToken ct)
+        {
+            CompletionAttempts++;
+            Assert.NotNull(_selected);
+            _selected = null;
+            await MoveAsync(target, fx, fy, tx, ty, ct);
+        }
         public bool RejectFirstInput { get; set; }
         public ExternalInputDelivery InputDelivery { get; set; }
         public List<ExternalInputDelivery> Deliveries { get; } = [];
@@ -395,6 +408,10 @@ public partial class ExternalSessionTests
                 }
                 png = _scaledPng!;
             }
+            if (_selected is { } selection)
+                png = PulsePiece(png, selection, flipped, 20);
+            else if (PulseEveryCapture)
+                png = PulsePiece(png, new Square(0, 0), flipped, Captures % 2 == 0 ? 7 : 18);
             CaptureSizes.Add((480 * BackingScale, 530 * BackingScale, Target));
             return new ExternalFrame(Target, png);
         }
@@ -415,6 +432,12 @@ public partial class ExternalSessionTests
                 var file = (int)Math.Round((x - 40) / 50);
                 var rank = (int)Math.Round((y - 40) / 50);
                 return new Square(flipped ? 8 - file : file, flipped ? 9 - rank : rank);
+            }
+            if (IgnoreInputs > 0)
+            {
+                IgnoreInputs--;
+                if (SelectOnIgnoredInput) _selected = Point(fx, fy);
+                return;
             }
             Assert.True(Game.TryMove(Point(fx, fy), Point(tx, ty), out var move));
             LastInput = move.Uci;

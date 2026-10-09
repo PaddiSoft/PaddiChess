@@ -10,7 +10,7 @@ public class RecognitionRefreshTests
         ExternalBoardTests.Render(game), new(40, 40, 440, 490, false));
 
     [Fact]
-    public async Task RecoveryIsSingleFlightAndNeverPublishesForChangedBoardOrHistory()
+    public async Task RecoveryIsSingleFlightAndReclassifiesChangesWithoutReusingOldHistory()
     {
         var game = new XiangqiGame(); var original = Frame(game);
         var completion = new TaskCompletionSource<SkinRecognition?>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -25,7 +25,7 @@ public class RecognitionRefreshTests
         Assert.Null(refresh.Current("new game", "e3e4", original));
         Assert.Null(refresh.Current("history", null, original));
         Assert.True(game.TryMoveUci("e3e4", out _));
-        Assert.Null(refresh.Current("history", "e3e4", Frame(game)));
+        Assert.Equal(game.CurrentFen().Split(' ')[0], refresh.Current("history", "e3e4", Frame(game))?.Fen.Split(' ')[0]);
     }
 
     [Fact]
@@ -36,6 +36,8 @@ public class RecognitionRefreshTests
         Assert.True(refresh.TryStart("history", null, frame, TimeSpan.Zero, _ => throw new IOException()));
         Assert.Null(refresh.Current("history", null, frame));
         Assert.False(refresh.TryStart("history", null, frame, TimeSpan.FromSeconds(1), _ => throw new Exception()));
+        for (var i = 0; i < 100 && refresh.IsRunning; i++) await Task.Delay(5);
+        Assert.False(refresh.IsRunning);
         var cancelled = false;
         Assert.True(refresh.TryStart("history", null, frame, TimeSpan.FromSeconds(2), async token =>
         {

@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using PaddiXiangqi.External;
 
 namespace PaddiXiangqi.Tests;
@@ -12,8 +14,38 @@ public sealed class WindowsCaptureFactAttribute : FactAttribute
     }
 }
 
+public sealed class WindowsNativeInputFactAttribute : FactAttribute
+{
+    public WindowsNativeInputFactAttribute()
+    {
+        if (!OperatingSystem.IsWindows() || Environment.GetEnvironmentVariable("PADDI_TEST_NATIVE_INPUT") != "1")
+            Skip = "Native input is opt-in and targets only the owned Win32 fixture on an interactive Windows test desktop.";
+    }
+}
+
 public class WindowsCaptureIntegrationTests
 {
+    [WindowsNativeInputFact]
+    public async Task PacedSourceAndDestinationClicksReachAnOwnedWin32Window()
+    {
+        using var window = new OwnedCaptureWindow();
+        window.Show();
+        var desktop = ExternalDesktop.Create();
+        await desktop.MoveAsync(window.Target, 40, 100, 180, 100, default);
+        for (int i = 0; i < 100 && window.Input.Count < 4; i++) await Task.Delay(10);
+        var events = window.Input.ToArray();
+        Assert.Equal(new uint[] { 0x0201, 0x0202, 0x0201, 0x0202 }, events.Select(e => e.Message));
+        Assert.Equal(new[] { 40, 40, 180, 180 }, events.Select(e => e.X));
+        Assert.All(events, e => Assert.Equal(100, e.Y));
+        Assert.True(Stopwatch.GetElapsedTime(events[0].Time, events[1].Time).TotalMilliseconds >= 40);
+        Assert.True(Stopwatch.GetElapsedTime(events[2].Time, events[3].Time).TotalMilliseconds >= 40);
+        await desktop.CompleteSelectedMoveAsync(window.Target, 40, 100, 180, 100, default);
+        for (int i = 0; i < 100 && window.Input.Count < 6; i++) await Task.Delay(10);
+        events = window.Input.ToArray();
+        Assert.Equal(6, events.Length);
+        Assert.All(events.Skip(4), e => Assert.Equal(180, e.X));
+    }
+
     [WindowsCaptureFact]
     public async Task CapturedBgraStaysImmutableAndNeverKeepsUnpaintedPixelsFromAnOlderFrame()
     {
@@ -49,7 +81,8 @@ public class WindowsCaptureIntegrationTests
     // No user's screen, game, focus, mouse or permissions are touched.
     private sealed class OwnedCaptureWindow : IDisposable
     {
-        private const uint Print = 0x0317, ResizeMessage = 0x8001, Close = 0x0010, Destroy = 0x0002;
+        private const uint Print = 0x0317, ResizeMessage = 0x8001, ShowMessage = 0x8002, Close = 0x0010, Destroy = 0x0002;
+        public ConcurrentQueue<(uint Message, int X, int Y, long Time)> Input { get; } = new();
         private readonly Thread _thread;
         private readonly WndProc _procedure;
         private readonly ManualResetEventSlim _ready = new();
@@ -68,6 +101,7 @@ public class WindowsCaptureIntegrationTests
             if (_error != null) throw _error;
         }
         public void Resize(int width, int height) => SendMessage(_handle, ResizeMessage, width, height);
+        public void Show() => SendMessage(_handle, ShowMessage, 0, 0);
         private void Run()
         {
             var previousDpi = SetThreadDpiAwarenessContext(-4);
@@ -93,6 +127,10 @@ public class WindowsCaptureIntegrationTests
         }
         private nint Handle(nint window, uint message, nint wParam, nint lParam)
         {
+            if (message == ShowMessage)
+            { SetWindowPos(window, -1, 20, 20, _width, _height, 0x0040); return 0; }
+            if (message is 0x0201 or 0x0202)
+                Input.Enqueue((message, (short)(lParam & 0xffff), (short)((lParam >> 16) & 0xffff), Stopwatch.GetTimestamp()));
             if (message == Print)
             {
                 if (_partial) Fill(wParam, new(0, 0, 10, 10), 0x00ff00);

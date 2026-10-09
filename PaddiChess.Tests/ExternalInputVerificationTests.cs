@@ -44,7 +44,7 @@ public class ExternalInputVerificationTests
     }
 
     [Fact]
-    public async Task PreInputEvidenceOnlyRecoversTheSameFrameAndGameHistory()
+    public async Task PreInputEvidenceReclassifiesChangedFramesAndIsBoundToGameHistory()
     {
         var (before, after, horse) = JjRookCaptureTests.Frames();
         var game = JjRookCaptureTests.BeforeGame();
@@ -55,7 +55,9 @@ public class ExternalInputVerificationTests
         Assert.Same(read, refresh.Current("before-capture", null, after));
         Assert.Null(refresh.Current("another-history", null, after));
         Assert.Null(refresh.Current("before-capture", "c2e3", after));
-        Assert.Null(refresh.Current("before-capture", null, horse));
+        var moved = refresh.Current("before-capture", null, horse);
+        Assert.NotNull(moved);
+        Assert.NotEqual(read.Fen.Split(' ')[0], moved.Fen.Split(' ')[0]);
         var match = ExternalSynchronizationSession.Match(after, new ExternalBoardTracker(before, game), game, null, null,
             refresh.Current("before-capture", null, after));
         Assert.Equal(new[] { "a6b6" }, match.Moves);
@@ -91,7 +93,7 @@ public partial class ExternalSessionTests
             await Get<Task>(window, "_externalTask");
             await history.FlushAsync();
             var events = await ExternalHistoryStore.ReadEventsAsync(history.EventsPath);
-            Assert.Contains(events, entry => entry.Kind == "blocked" && entry.ObservedFen != null);
+            Assert.Contains(events, entry => (entry.Kind == "blocked" || entry.Kind == "observation") && entry.ObservedFen != null);
             var captureConfirm = Assert.Single(events, entry => entry.Kind == "confirmed" && entry.Move == "h9g7");
             var input = Assert.Single(events, entry => entry.Kind == "sent");
             Assert.True(captureConfirm.Sequence < input.Sequence, "No native input is allowed before both missed plies are confirmed.");

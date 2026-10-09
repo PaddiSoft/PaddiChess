@@ -79,9 +79,11 @@ public class PikafishTests
         Assert.Equal(1, engine.ReadyHandshakeCount);
 
         using var interrupted = new CancellationTokenSource();
+        var searching = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var pending = engine.SearchAsync(XiangqiGame.InitialFen, "",
-            new EngineSettings(20, 1, 16, 120, 80) { MultiPvOverride = 1 }, null, interrupted.Token);
-        await Task.Delay(120);
+            new EngineSettings(20, 1, 16, 120, 80) { MultiPvOverride = 1 }, _ => searching.TrySetResult(), interrupted.Token);
+        // Cancel an actual search, not initialization when CI is under load.
+        await searching.Task.WaitAsync(TimeSpan.FromSeconds(10));
         interrupted.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
         // 0925 declares Skill Level: switching 0 -> 20 must synchronize that

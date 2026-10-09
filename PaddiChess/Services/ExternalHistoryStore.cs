@@ -24,7 +24,7 @@ public sealed record ExternalHistoryEvent
     public string Label => Kind switch
     {
         "started" => "开始记录", "confirmed" => "确认落子", "decision" => "选择着法",
-        "sent" => "发送落子", "correction" => "自动校正", "corrected" => "完成校正",
+        "sent" => "发送落子", "input-retry" => "补发终点", "verification" => "落子前核验", "correction" => "自动校正", "corrected" => "完成校正",
         "paused" => "暂停", "error" => "异常", "ended" => "结束记录",
         "observation" => "识别候选", "blocked" => "等待核验", "resumed" => "继续接管",
         _ => Kind
