@@ -50,11 +50,13 @@ public class WindowsCaptureIntegrationTests
     public async Task CapturedBgraStaysImmutableAndNeverKeepsUnpaintedPixelsFromAnOlderFrame()
     {
         using var window = new OwnedCaptureWindow();
+        window.Show(); // PW_RENDERFULLCONTENT needs a shown, renderable window.
         var desktop = ExternalDesktop.Create();
         try
         {
             var first = await desktop.CaptureAsync(window.Target, default);
-            Assert.True(window.PrintCount > 0, "PrintWindow must ask the owned window to render.");
+            Assert.True(window.PrintCount > 0, "PrintWindow must ask the owned window to render; messages: " +
+                string.Join(",", window.Messages.Select(value => value.ToString("X"))));
             Assert.Equal((240, 220), (first.Pixels!.Width, first.Pixels.Height));
             Assert.Equal((byte)255, Pixel(first, 50, 100)[2]); // B,G,R,A: red is index 2.
             Assert.Equal((byte)255, Pixel(first, 190, 100)[0]); // Blue is index 0.
@@ -78,11 +80,12 @@ public class WindowsCaptureIntegrationTests
         return pixels.Bgra.AsSpan(y * pixels.RowBytes + x * 4, 4).ToArray();
     }
 
-    // A hidden, self-owned Win32 window paints only in response to PrintWindow.
-    // No user's screen, game, focus, mouse or permissions are touched.
+    // A self-owned Win32 window, shown without activation, paints for PrintWindow.
+    // The opt-in native input test activates/clicks only this fixture.
     private sealed class OwnedCaptureWindow : IDisposable
     {
-        private const uint Print = 0x0317, ResizeMessage = 0x8001, ShowMessage = 0x8002, Close = 0x0010, Destroy = 0x0002;
+        private const uint Print = 0x0317, PrintClient = 0x0318, ResizeMessage = 0x8001, ShowMessage = 0x8002, Close = 0x0010, Destroy = 0x0002;
+        public ConcurrentQueue<uint> Messages { get; } = new();
         public ConcurrentQueue<(uint Message, int X, int Y, long Time)> Input { get; } = new();
         private readonly Thread _thread;
         private readonly WndProc _procedure;
@@ -130,11 +133,12 @@ public class WindowsCaptureIntegrationTests
         }
         private nint Handle(nint window, uint message, nint wParam, nint lParam)
         {
+            Messages.Enqueue(message);
             if (message == ShowMessage)
-            { SetWindowPos(window, -1, 20, 20, _width, _height, 0x0040); return 0; }
+            { SetWindowPos(window, -1, 20, 20, _width, _height, 0x0050); return 0; }
             if (message is 0x0201 or 0x0202)
                 Input.Enqueue((message, (short)(lParam & 0xffff), (short)((lParam >> 16) & 0xffff), Stopwatch.GetTimestamp()));
-            if (message == Print)
+            if (message is Print or PrintClient)
             {
                 Interlocked.Increment(ref _printCount);
                 if (_partial) Fill(wParam, new(0, 0, 10, 10), 0x00ff00);

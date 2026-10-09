@@ -50,6 +50,7 @@ public partial class ExternalSessionTests
             Click(window, "ExternalDisconnectButton");
             await WaitPreflightAsync(() => !Get<bool>(window, "_externalLinked") &&
                 Get<ExternalHistoryStore?>(window, "_externalHistory") is null, window);
+            await Get<Task>(window, "_externalHistoryDrain");
             events = await ExternalHistoryStore.ReadEventsAsync(first.EventsPath);
             Assert.Contains(events, entry => entry.Kind == "resumed");
             Assert.Equal("ended", events[^1].Kind);
