@@ -73,7 +73,7 @@ public partial class ExternalSessionTests
             await WaitPreflightAsync(() => fixture.Desktop.Deliveries.Count > 0, fixture.Window);
             await Task.Delay(1900);
             Assert.Equal(0, fixture.Desktop.CompletionAttempts);
-            Assert.Equal(1, fixture.Desktop.Deliveries.Count);
+            Assert.Single(fixture.Desktop.Deliveries);
             Assert.NotNull(Get<string?>(fixture.Window, "_externalPendingMove"));
         });
     }
