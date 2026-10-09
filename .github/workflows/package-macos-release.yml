@@ -1,0 +1,84 @@
+name: Package macOS draft release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing draft release tag, such as v1.0.5
+        required: true
+        type: string
+      source_commit:
+        description: Full verified source commit matching the draft release target
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-package-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: macos-14
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.tag }}
+      SOURCE_COMMIT: ${{ inputs.source_commit }}
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - name: Require a draft tied to the verified source
+        run: |
+          gh release view "$RELEASE_TAG" --json isDraft,targetCommitish,tagName > "$RUNNER_TEMP/release.json"
+          python3 - <<'PY'
+          import json, os, re, subprocess
+          release = json.load(open(os.environ['RUNNER_TEMP'] + '/release.json'))
+          commit = os.environ['SOURCE_COMMIT']
+          assert re.fullmatch(r'[0-9a-f]{40}', commit)
+          assert re.fullmatch(r'v\d+\.\d+\.\d+', os.environ['RELEASE_TAG'])
+          assert release['isDraft'], 'Never replace a published installer'
+          assert release['tagName'] == os.environ['RELEASE_TAG']
+          assert release['targetCommitish'] == commit
+          assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() == commit
+          PY
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build and audit the self-contained installer
+        run: |
+          python3 scripts/audit-publication.py
+          PADDI_DIST_DIR="$GITHUB_WORKSPACE/dist/release-macos" bash PaddiChess/Packaging/package.sh arm
+          python3 scripts/audit-publication.py --release dist/release-macos/Paddi象棋.app
+          mv dist/release-macos/Paddi象棋-macOS-AppleSilicon.zip dist/release-macos/PaddiChess-macOS-AppleSilicon.zip
+      - name: Upload and verify the draft assets
+        run: |
+          gh release upload "$RELEASE_TAG" dist/release-macos/PaddiChess-macOS-AppleSilicon.zip --clobber
+          gh api "repos/$GITHUB_REPOSITORY/releases" > "$RUNNER_TEMP/releases.json"
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, re
+          release = next(r for r in json.load(open(os.environ['RUNNER_TEMP'] + '/releases.json')) if r['tag_name'] == os.environ['RELEASE_TAG'])
+          assert release['draft'] and release['target_commitish'] == os.environ['SOURCE_COMMIT']
+          names = ['PaddiChess-Windows-x64.zip', 'PaddiChess-macOS-AppleSilicon.zip']
+          assets = {a['name']: a for a in release['assets']}
+          lines = []
+          for name in names:
+              asset = assets[name]
+              assert asset['state'] == 'uploaded' and asset['size'] > 1_000_000
+              digest = asset['digest']
+              assert re.fullmatch(r'sha256:[0-9a-f]{64}', digest)
+              if 'macOS' in name:
+                  path = pathlib.Path('dist/release-macos') / name
+                  assert asset['size'] == path.stat().st_size
+                  assert digest == 'sha256:' + hashlib.sha256(path.read_bytes()).hexdigest()
+              lines.append(digest.removeprefix('sha256:') + '  ' + name + '\n')
+          pathlib.Path('dist/release-macos/SHA256SUMS.txt').write_text(''.join(lines))
+          PY
+          gh release upload "$RELEASE_TAG" dist/release-macos/SHA256SUMS.txt --clobber
