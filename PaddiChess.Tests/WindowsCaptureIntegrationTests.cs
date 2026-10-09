@@ -47,7 +47,7 @@ public class WindowsCaptureIntegrationTests
     }
 
     [WindowsCaptureFact]
-    public async Task CapturedBgraStaysImmutableAndNeverKeepsUnpaintedPixelsFromAnOlderFrame()
+    public async Task CapturedBgraStaysImmutableAcrossNativeRepaintsAndResizes()
     {
         using var window = new OwnedCaptureWindow();
         window.Show(); // PW_RENDERFULLCONTENT needs a shown, renderable window.
@@ -55,8 +55,6 @@ public class WindowsCaptureIntegrationTests
         try
         {
             var first = await desktop.CaptureAsync(window.Target, default);
-            Assert.True(window.PrintCount > 0, "PrintWindow must ask the owned window to render; messages: " +
-                string.Join(",", window.Messages.Select(value => value.ToString("X"))));
             Assert.Equal((240, 220), (first.Pixels!.Width, first.Pixels.Height));
             Assert.Equal((byte)255, Pixel(first, 50, 100)[2]); // B,G,R,A: red is index 2.
             Assert.Equal((byte)255, Pixel(first, 190, 100)[0]); // Blue is index 0.
@@ -80,12 +78,12 @@ public class WindowsCaptureIntegrationTests
         return pixels.Bgra.AsSpan(y * pixels.RowBytes + x * 4, 4).ToArray();
     }
 
-    // A self-owned Win32 window, shown without activation, paints for PrintWindow.
+    // A self-owned Win32 window, shown without activation, paints through GDI.
+    // PW_RENDERFULLCONTENT can copy the DWM surface without sending WM_PRINT.
     // The opt-in native input test activates/clicks only this fixture.
     private sealed class OwnedCaptureWindow : IDisposable
     {
-        private const uint Print = 0x0317, PrintClient = 0x0318, ResizeMessage = 0x8001, ShowMessage = 0x8002, Close = 0x0010, Destroy = 0x0002;
-        public ConcurrentQueue<uint> Messages { get; } = new();
+        private const uint Print = 0x0317, PrintClient = 0x0318, Paint = 0x000f, ResizeMessage = 0x8001, ShowMessage = 0x8002, RepaintMessage = 0x8003, Close = 0x0010, Destroy = 0x0002;
         public ConcurrentQueue<(uint Message, int X, int Y, long Time)> Input { get; } = new();
         private readonly Thread _thread;
         private readonly WndProc _procedure;
@@ -93,11 +91,9 @@ public class WindowsCaptureIntegrationTests
         private Exception? _error;
         private nint _handle;
         private volatile bool _partial;
-        private int _printCount;
-        public int PrintCount => Volatile.Read(ref _printCount);
         private int _width = 240, _height = 220;
         public ExternalWindow Target => new((long)_handle, Environment.ProcessId, "Owned capture fixture", 20, 20, _width, _height);
-        public bool PartialPaint { set => _partial = value; }
+        public bool PartialPaint { set { _partial = value; SendMessage(_handle, RepaintMessage, 0, 0); } }
         public OwnedCaptureWindow()
         {
             _procedure = Handle;
@@ -133,31 +129,47 @@ public class WindowsCaptureIntegrationTests
         }
         private nint Handle(nint window, uint message, nint wParam, nint lParam)
         {
-            Messages.Enqueue(message);
             if (message == ShowMessage)
-            { SetWindowPos(window, -1, 20, 20, _width, _height, 0x0050); return 0; }
+            { SetWindowPos(window, -1, 20, 20, _width, _height, 0x0050); Repaint(window); return 0; }
+            if (message == RepaintMessage) { Repaint(window); return 0; }
             if (message is 0x0201 or 0x0202)
                 Input.Enqueue((message, (short)(lParam & 0xffff), (short)((lParam >> 16) & 0xffff), Stopwatch.GetTimestamp()));
             if (message is Print or PrintClient)
             {
-                Interlocked.Increment(ref _printCount);
-                if (_partial) Fill(wParam, new(0, 0, 10, 10), 0x00ff00);
-                else
-                {
-                    Fill(wParam, new(0, 0, _width / 2, _height), 0x0000ff);
-                    Fill(wParam, new(_width / 2, 0, _width, _height), 0xff0000);
-                }
+                Draw(wParam);
                 GdiFlush(); // Finish this thread's painting before handing the DC back.
                 return 1;
+            }
+            if (message == Paint)
+            {
+                var dc = BeginPaint(window, out var paint);
+                try { Draw(dc); GdiFlush(); }
+                finally { EndPaint(window, ref paint); }
+                return 0;
             }
             if (message == ResizeMessage)
             {
                 _width = (int)wParam; _height = (int)lParam;
                 SetWindowPos(window, 0, 20, 20, _width, _height, 0x14);
+                Repaint(window);
                 return 0;
             }
             if (message == Destroy) { PostQuitMessage(0); return 0; }
             return DefWindowProc(window, message, wParam, lParam);
+        }
+        private static void Repaint(nint window) { InvalidateRect(window, 0, false); UpdateWindow(window); DwmFlush(); }
+        private void Draw(nint dc)
+        {
+            if (_partial)
+            {
+                Fill(dc, new(0, 0, _width, _height), 0);
+                Fill(dc, new(0, 0, 10, 10), 0x00ff00);
+            }
+            else
+            {
+                Fill(dc, new(0, 0, _width / 2, _height), 0x0000ff);
+                Fill(dc, new(_width / 2, 0, _width, _height), 0xff0000);
+            }
         }
         private static void Fill(nint dc, Rect rect, uint colour)
         {
@@ -184,6 +196,14 @@ public class WindowsCaptureIntegrationTests
             public nint SmallIcon;
         }
         [StructLayout(LayoutKind.Sequential)] private readonly record struct Rect(int Left, int Top, int Right, int Bottom);
+        [StructLayout(LayoutKind.Sequential)] private struct PaintInfo
+        {
+            public nint Dc;
+            public int Erase;
+            public Rect Bounds;
+            public int Restore, Incremental;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)] public byte[] Reserved;
+        }
         [StructLayout(LayoutKind.Sequential)] private struct Message { public nint Window; public uint Id; public nint WParam, LParam; public uint Time; public int X, Y; public uint Private; }
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern nint GetModuleHandle(string? name);
         [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] private static extern ushort RegisterClassEx(ref WindowClass type);
@@ -197,6 +217,11 @@ public class WindowsCaptureIntegrationTests
         [DllImport("user32.dll")] private static extern void PostQuitMessage(int result);
         [DllImport("user32.dll")] private static extern bool SetWindowPos(nint window, nint after, int x, int y, int width, int height, uint flags);
         [DllImport("user32.dll")] private static extern int FillRect(nint dc, ref Rect rect, nint brush);
+        [DllImport("user32.dll")] private static extern nint BeginPaint(nint window, out PaintInfo paint);
+        [DllImport("user32.dll")] private static extern bool EndPaint(nint window, ref PaintInfo paint);
+        [DllImport("user32.dll")] private static extern bool InvalidateRect(nint window, nint rect, bool erase);
+        [DllImport("user32.dll")] private static extern bool UpdateWindow(nint window);
+        [DllImport("dwmapi.dll")] private static extern int DwmFlush();
         [DllImport("user32.dll")] private static extern nint SetThreadDpiAwarenessContext(nint context);
         [DllImport("gdi32.dll")] private static extern nint CreateSolidBrush(uint colour);
         [DllImport("gdi32.dll")] private static extern bool DeleteObject(nint handle);
