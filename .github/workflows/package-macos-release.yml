@@ -56,7 +56,42 @@ jobs:
         run: |
           python3 scripts/audit-publication.py
           PADDI_DIST_DIR="$GITHUB_WORKSPACE/dist/release-macos" bash PaddiChess/Packaging/package.sh arm
-          python3 scripts/audit-publication.py --release dist/release-macos/Paddi象棋.app
+          python3 - <<'PY'
+          import json, os, pathlib, re, runpy
+          audit = runpy.run_path('scripts/audit-publication.py')['audit']
+          bundle = pathlib.Path('dist/release-macos/Paddi象棋.app')
+          report = audit(pathlib.Path.cwd(), bundle)
+          # Upstream libraries were also built by a GitHub user named runner.
+          # That collides with this runner's home. Downgrade only exact path
+          # strings independently present in restored upstream dependencies;
+          # credentials, project binaries and new build paths remain errors.
+          roots = [pathlib.Path.home() / '.nuget/packages', pathlib.Path(os.environ['DOTNET_ROOT']) / 'packs']
+          home = os.fsencode(str(pathlib.Path.home()) + '/')
+          for finding in report['findings']:
+              path = bundle / finding['path']
+              if finding['category'] != 'absolute_user_path' or path.name.startswith(('Paddi', 'PikaDesk')):
+                  continue
+              if path.suffix != '.dylib':
+                  continue
+              paths = set(re.findall(re.escape(home) + rb'[\x20-\x7e]+', path.read_bytes()))
+              if not paths:
+                  continue
+              remaining = set(paths)
+              for root in roots:
+                  if not root.is_dir():
+                      continue
+                  for dependency in root.rglob(path.name):
+                      data = dependency.read_bytes()
+                      remaining = {value for value in remaining if value not in data}
+                      if not remaining:
+                          break
+                  if not remaining:
+                      break
+              if not remaining:
+                  finding.update(category='verified_upstream_build_path', severity='review')
+          print(json.dumps(report, indent=2))
+          assert not any(f['severity'] == 'error' for f in report['findings']), 'Publication audit failed'
+          PY
           mv dist/release-macos/Paddi象棋-macOS-AppleSilicon.zip dist/release-macos/PaddiChess-macOS-AppleSilicon.zip
       - name: Upload and verify the draft assets
         run: |
