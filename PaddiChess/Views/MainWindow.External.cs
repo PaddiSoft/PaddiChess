@@ -759,7 +759,10 @@ public partial class MainWindow
                 }
                 if (!decisionTask.IsCompleted)
                 {
-                    ExternalStatusText.Text = $"已同步 {_game.Ply} 手 · {(model?.Model ?? DefaultEngine.Name)} 正在计算…";
+                    ExternalStatusText.Text = model is null
+                        ? DefaultEngine.Name + " 正在计算 · " + PlayingBudgetDescription(
+                            decisionConfiguration?.EngineSettings ?? ReadPlayingEngineSettings())
+                        : $"{model.Model} 思考中 · 等级 {model.ReasoningEffort ?? "自动"}";
                     continue;
                 }
                 var decision = await decisionTask;
