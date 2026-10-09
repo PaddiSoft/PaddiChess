@@ -54,6 +54,7 @@ public class WindowsCaptureIntegrationTests
         try
         {
             var first = await desktop.CaptureAsync(window.Target, default);
+            Assert.True(window.PrintCount > 0, "PrintWindow must ask the owned window to render.");
             Assert.Equal((240, 220), (first.Pixels!.Width, first.Pixels.Height));
             Assert.Equal((byte)255, Pixel(first, 50, 100)[2]); // B,G,R,A: red is index 2.
             Assert.Equal((byte)255, Pixel(first, 190, 100)[0]); // Blue is index 0.
@@ -89,6 +90,8 @@ public class WindowsCaptureIntegrationTests
         private Exception? _error;
         private nint _handle;
         private volatile bool _partial;
+        private int _printCount;
+        public int PrintCount => Volatile.Read(ref _printCount);
         private int _width = 240, _height = 220;
         public ExternalWindow Target => new((long)_handle, Environment.ProcessId, "Owned capture fixture", 20, 20, _width, _height);
         public bool PartialPaint { set => _partial = value; }
@@ -133,12 +136,14 @@ public class WindowsCaptureIntegrationTests
                 Input.Enqueue((message, (short)(lParam & 0xffff), (short)((lParam >> 16) & 0xffff), Stopwatch.GetTimestamp()));
             if (message == Print)
             {
+                Interlocked.Increment(ref _printCount);
                 if (_partial) Fill(wParam, new(0, 0, 10, 10), 0x00ff00);
                 else
                 {
                     Fill(wParam, new(0, 0, _width / 2, _height), 0x0000ff);
                     Fill(wParam, new(_width / 2, 0, _width, _height), 0xff0000);
                 }
+                GdiFlush(); // Finish this thread's painting before handing the DC back.
                 return 1;
             }
             if (message == ResizeMessage)
@@ -191,5 +196,6 @@ public class WindowsCaptureIntegrationTests
         [DllImport("user32.dll")] private static extern nint SetThreadDpiAwarenessContext(nint context);
         [DllImport("gdi32.dll")] private static extern nint CreateSolidBrush(uint colour);
         [DllImport("gdi32.dll")] private static extern bool DeleteObject(nint handle);
+        [DllImport("gdi32.dll")] private static extern bool GdiFlush();
     }
 }

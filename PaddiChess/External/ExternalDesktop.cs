@@ -423,6 +423,10 @@ internal sealed class WindowsExternalDesktop : IExternalDesktop
             // Never leave last frame's board in an unpainted area of a reused DIB.
             if (!PatBlt(_memory, 0, 0, _width, _height, 0x00000042)) // BLACKNESS
                 throw new IOException("无法清理窗口截图缓冲");
+            // GDI batches are per thread. Flush our clear before PrintWindow lets
+            // the target's UI thread paint into this DC, or a later flush can
+            // erase that fresh painting and publish a black/partial board.
+            GdiFlush();
             if (!PrintWindow((nint)_window, _memory, 2))
                 throw new IOException("此窗口暂时未提供截图，正在等待窗口恢复");
             GdiFlush(); // Complete batched GDI writes before reading DIB memory.

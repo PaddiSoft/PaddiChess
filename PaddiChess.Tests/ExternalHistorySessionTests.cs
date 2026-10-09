@@ -33,8 +33,11 @@ public partial class ExternalSessionTests
             Assert.NotEqual(sent.Fen, confirmed.Fen);
             Assert.Equal(sent.Fen, confirmed.BeforeFen);
             Assert.Equal("paused", events[^1].Kind);
-            var log = await File.ReadAllTextAsync(first.EventsPath);
-            var saved = await File.ReadAllTextAsync(first.RecordPath);
+            using var logReader = new StreamReader(new FileStream(first.EventsPath, FileMode.Open,
+                FileAccess.Read, FileShare.ReadWrite));
+            var log = await logReader.ReadToEndAsync();
+            using var recordReader = new StreamReader(ExternalHistoryStore.OpenRecordRead(first.RecordPath));
+            var saved = await recordReader.ReadToEndAsync();
             Assert.DoesNotContain("isolated-dummy-key", log + saved);
             Assert.DoesNotContain("fixture.invalid", log + saved);
 

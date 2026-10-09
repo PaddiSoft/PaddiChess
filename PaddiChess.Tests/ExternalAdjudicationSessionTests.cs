@@ -92,7 +92,8 @@ public partial class ExternalSessionTests
                 Set(window, "_externalTracker", new ExternalBoardTracker(BoardObservation.Read(png, geometry), game));
                 Set(window, "_externalLinked", true);
                 Click(window, "ExternalStartButton");
-                await Task.Delay(400);
+                await WaitPreflightAsync(() => desktop.Captures >= 2 &&
+                    window.FindControl<TextBlock>("ExternalStatusText")!.Text!.Contains("继续同步"), window);
                 Assert.True(Get<bool>(window, "_externalRunning"), window.FindControl<TextBlock>("ExternalStatusText")!.Text);
                 Assert.True(desktop.Captures >= 2);
                 Assert.Equal(0, desktop.Inputs);

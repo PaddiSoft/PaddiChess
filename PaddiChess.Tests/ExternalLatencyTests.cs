@@ -132,15 +132,14 @@ public partial class ExternalSessionTests
                 Click(window, "ExternalStartButton");
                 var game = Get<XiangqiGame>(window, "_game");
                 await desktop.OurMoveApplied.Task.WaitAsync(TimeSpan.FromSeconds(15));
-                var first = Stopwatch.StartNew();
-                while (game.Ply < 1 && first.ElapsedMilliseconds < 160) await Task.Delay(10);
+                await WaitPreflightAsync(() => game.Ply >= 1, window);
                 _latencyOutput.WriteLine($"GUI confirmed own move: {Stopwatch.GetElapsedTime(desktop.OurMoveTimestamp).TotalMilliseconds:F1} ms; flipped={flipped}; raw={raw}");
                 Assert.Equal(1, game.Ply); // Visible before the opponent's reply, not after MoveAsync returns.
                 Assert.False(desktop.ReplyApplied.Task.IsCompleted);
                 Assert.Equal(1, window.FindControl<ComboBox>("ExternalTurnBox")!.SelectedIndex);
+                desktop.AllowReply.TrySetResult();
                 await desktop.ReplyApplied.Task.WaitAsync(TimeSpan.FromSeconds(3));
-                var reply = Stopwatch.StartNew();
-                while (game.Ply < 2 && reply.ElapsedMilliseconds < 500) await Task.Delay(10);
+                await WaitPreflightAsync(() => game.Ply >= 2, window);
                 _latencyOutput.WriteLine($"GUI confirmed reply: {Stopwatch.GetElapsedTime(desktop.ReplyTimestamp).TotalMilliseconds:F1} ms; flipped={flipped}; raw={raw}");
                 Assert.Equal(2, game.Ply);
                 Assert.False(desktop.InputCompleted);
@@ -168,6 +167,8 @@ public partial class ExternalSessionTests
         public XiangqiGame Game { get; } = new();
         public TaskCompletionSource OurMoveApplied { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource ReplyApplied { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource AllowReply { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private TaskCompletionSource AllowInputReturn { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public long OurMoveTimestamp { get; private set; }
         public long ReplyTimestamp { get; private set; }
         public bool InputCompleted { get; private set; }
@@ -191,11 +192,13 @@ public partial class ExternalSessionTests
             Assert.True(Game.TryMove(Point(fx, fy), Point(tx, ty), out _));
             OurMoveTimestamp = Stopwatch.GetTimestamp();
             OurMoveApplied.TrySetResult();
-            await Task.Delay(180, ct);
+            // Assert observation advances while native input is pending without
+            // relying on a hosted runner delivering timers within 160 ms.
+            await AllowReply.Task.WaitAsync(ct);
             Assert.True(Game.TryMoveUci(Game.AllLegalMoves()[0].Uci, out _));
             ReplyTimestamp = Stopwatch.GetTimestamp();
             ReplyApplied.TrySetResult();
-            await Task.Delay(1500, ct); // Native post-click completion must not stall captures.
+            await AllowInputReturn.Task.WaitAsync(ct); // Only cancellation releases this pending native call.
             InputCompleted = true;
         }
     }
