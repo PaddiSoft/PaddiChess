@@ -504,8 +504,9 @@ case "request-screen":
     }
     print("ok")
 case "request-accessibility":
-    if !AXIsProcessTrusted() {
+    if !AXIsProcessTrusted() || !CGPreflightPostEventAccess() {
         _ = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String:true] as CFDictionary)
+        if !CGPreflightPostEventAccess() { _ = CGRequestPostEventAccess() }
         NSWorkspace.shared.open(URL(string:"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
     }
     print("ok")
