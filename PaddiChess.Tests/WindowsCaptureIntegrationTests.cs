@@ -46,6 +46,38 @@ public class WindowsCaptureIntegrationTests
         Assert.All(events.Skip(4), e => Assert.Equal(180, e.X));
     }
 
+    [WindowsNativeInputFact]
+    public async Task PointerMovementDuringHoverAndPressDoesNotRedirectClicks()
+    {
+        using var window = new OwnedCaptureWindow { DisplacePointer = true };
+        window.Show();
+        var desktop = ExternalDesktop.Create();
+        await desktop.MoveAsync(window.Target, 40, 100, 180, 100, default);
+        await desktop.CompleteSelectedMoveAsync(window.Target, 40, 100, 180, 100, default);
+        for (int i = 0; i < 100 && window.Input.Count < 6; i++) await Task.Delay(10);
+        var events = window.Input.ToArray();
+        Assert.True(window.PointerDisplacements >= 3, "The fixture must actually move the OS pointer during delivery.");
+        Assert.Equal(new uint[] { 0x0201, 0x0202, 0x0201, 0x0202, 0x0201, 0x0202 }, events.Select(e => e.Message));
+        Assert.Equal(new[] { 40, 40, 180, 180, 180, 180 }, events.Select(e => e.X));
+        Assert.All(events, e => Assert.Equal(100, e.Y));
+    }
+
+    [WindowsNativeInputFact]
+    public async Task PointerMovementDoesNotRedirectDragPressOrRelease()
+    {
+        using var window = new OwnedCaptureWindow { DisplacePointer = true };
+        window.Show();
+        var desktop = ExternalDesktop.Create();
+        desktop.InputMode = ExternalInputMode.Drag;
+        await desktop.MoveAsync(window.Target, 40, 100, 180, 100, default);
+        for (int i = 0; i < 100 && window.Input.Count < 2; i++) await Task.Delay(10);
+        var events = window.Input.ToArray();
+        Assert.True(window.PointerDisplacements >= 2, "The drag must overlap pointer movement.");
+        Assert.Equal(new uint[] { 0x0201, 0x0202 }, events.Select(e => e.Message));
+        Assert.Equal(new[] { 40, 180 }, events.Select(e => e.X));
+        Assert.All(events, e => Assert.Equal(100, e.Y));
+    }
+
     [WindowsCaptureFact]
     public async Task CapturedBgraStaysImmutableAcrossNativeRepaintsAndResizes()
     {
@@ -85,6 +117,9 @@ public class WindowsCaptureIntegrationTests
     {
         private const uint Print = 0x0317, PrintClient = 0x0318, Paint = 0x000f, ResizeMessage = 0x8001, ShowMessage = 0x8002, RepaintMessage = 0x8003, Close = 0x0010, Destroy = 0x0002;
         public ConcurrentQueue<(uint Message, int X, int Y, long Time)> Input { get; } = new();
+        public bool DisplacePointer { get; init; }
+        public int PointerDisplacements => Volatile.Read(ref _pointerDisplacements);
+        private int _pointerDisplacements;
         private readonly Thread _thread;
         private readonly WndProc _procedure;
         private readonly ManualResetEventSlim _ready = new();
@@ -134,6 +169,13 @@ public class WindowsCaptureIntegrationTests
             if (message == RepaintMessage) { Repaint(window); return 0; }
             if (message is 0x0201 or 0x0202)
                 Input.Enqueue((message, (short)(lParam & 0xffff), (short)((lParam >> 16) & 0xffff), Stopwatch.GetTimestamp()));
+            // Deliberately move the real OS cursor after hover and press, within
+            // this owned window. No synthetic button messages bypass SendInput.
+            // The alternate row prevents recursive movement from this callback.
+            if (DisplacePointer && message is 0x0200 or 0x0201 && (short)((lParam >> 16) & 0xffff) == 100)
+            {
+                if (SetCursorPos(140, 180)) Interlocked.Increment(ref _pointerDisplacements);
+            }
             if (message is Print or PrintClient)
             {
                 Draw(wParam);
@@ -216,6 +258,7 @@ public class WindowsCaptureIntegrationTests
         [DllImport("user32.dll")] private static extern bool PostMessage(nint window, uint message, nint wParam, nint lParam);
         [DllImport("user32.dll")] private static extern void PostQuitMessage(int result);
         [DllImport("user32.dll")] private static extern bool SetWindowPos(nint window, nint after, int x, int y, int width, int height, uint flags);
+        [DllImport("user32.dll")] private static extern bool SetCursorPos(int x, int y);
         [DllImport("user32.dll")] private static extern int FillRect(nint dc, ref Rect rect, nint brush);
         [DllImport("user32.dll")] private static extern nint BeginPaint(nint window, out PaintInfo paint);
         [DllImport("user32.dll")] private static extern bool EndPaint(nint window, ref PaintInfo paint);
