@@ -478,9 +478,28 @@ internal sealed class WindowsExternalDesktop : IExternalDesktop
         var from = new Point((int)(window.X + fromX), (int)(window.Y + fromY));
         var to = new Point((int)(window.X + toX), (int)(window.Y + toY));
         var inputStarted = finishSelection;
-        void Button(uint flags)
+        void Button(uint flags, Point? location = null)
         {
-            var events = new[] { new MouseInputEvent { Mouse = new MouseInput { Flags = flags } } };
+            // A separate SetCursorPos followed by a delayed bare button event
+            // clicks wherever the physical mouse has moved in the meantime.
+            // Attach the physical-screen point to EACH button edge in the same
+            // native input record, including release after a held click/drag.
+            using var dpi = PhysicalPixelScope.Enter();
+            var mouse = new MouseInput { Flags = flags };
+            if (location is { } point)
+            {
+                var left = GetSystemMetrics(76); var top = GetSystemMetrics(77);
+                var width = GetSystemMetrics(78); var height = GetSystemMetrics(79);
+                long x = (long)point.X - left, y = (long)point.Y - top;
+                if (width <= 0 || height <= 0 || x < 0 || y < 0 || x >= width || y >= height)
+                    throw new ExternalInputBlockedException(inputStarted, "落点已不在当前桌面范围内，请检查显示器或窗口位置。");
+                // Map to the center of the physical pixel's 16-bit interval.
+                // Virtual-desktop metrics include monitors left/above primary.
+                mouse.X = (int)((x * 65536 + 32768) / width);
+                mouse.Y = (int)((y * 65536 + 32768) / height);
+                mouse.Flags |= 0x0001 | 0x8000 | 0x4000; // MOVE | ABSOLUTE | VIRTUALDESK
+            }
+            var events = new[] { new MouseInputEvent { Mouse = mouse } };
             if (SendInput(1, events, Marshal.SizeOf<MouseInputEvent>()) != 1)
                 throw new ExternalInputBlockedException(inputStarted,
                     "Windows 未接受模拟输入，请确认目标与本程序权限级别一致，或退出目标的管理员模式。");
@@ -497,8 +516,37 @@ internal sealed class WindowsExternalDesktop : IExternalDesktop
             ct.ThrowIfCancellationRequested();
             if (EscapePressed()) throw new OperationCanceledException(ct);
             if (!window.SameBounds(Describe((nint)window.Id))) throw new InvalidOperationException("目标窗口已移动");
+            if (GetForegroundWindow() != (nint)window.Id)
+                throw new ExternalInputBlockedException(inputStarted, "目标棋盘失去焦点，正在等待窗口可操作。");
             if (GetAncestor(WindowFromPoint(point), 2) != (nint)window.Id)
                 throw new ExternalInputBlockedException(inputStarted, "棋盘落点当前由其他窗口接收鼠标，正在等待窗口可操作。");
+        }
+        void ReleaseAt(Point point)
+        {
+            // Releasing must survive cancellation. Do not reposition into a
+            // different/covered/moved window if the user changed focus mid-press.
+            bool canReleaseAtPoint;
+            using (var dpi = PhysicalPixelScope.Enter())
+            {
+                try
+                {
+                    canReleaseAtPoint = window.SameBounds(Describe((nint)window.Id)) &&
+                        GetForegroundWindow() == (nint)window.Id &&
+                        GetAncestor(WindowFromPoint(point), 2) == (nint)window.Id;
+                }
+                catch (InvalidOperationException) { canReleaseAtPoint = false; }
+            }
+            if (canReleaseAtPoint)
+            {
+                try { Button(4, point); }
+                catch { Button(4); throw; } // Always attempt to release a held button.
+            }
+            else
+            {
+                Button(4);
+                if (!ct.IsCancellationRequested)
+                    throw new ExternalInputBlockedException(true, "落子过程中目标窗口状态改变，已释放按键，正在核验是否落子。");
+            }
         }
         // Both destinations must be usable before selecting or dragging a piece.
         Verify(from); Verify(to);
@@ -506,7 +554,7 @@ internal sealed class WindowsExternalDesktop : IExternalDesktop
         {
             Verify(from); MovePointer(from);
             await Task.Delay(50, ct); Verify(from);
-            Button(2);
+            Button(2, from);
             inputStarted = true;
             var completed = false;
             try
@@ -520,19 +568,8 @@ internal sealed class WindowsExternalDesktop : IExternalDesktop
             }
             finally
             {
-                // Cancel an interrupted drag at its source while that source still
-                // belongs to this window. Always release even if the window closed.
-                if (!completed)
-                {
-                    try
-                    {
-                        using var dpi = PhysicalPixelScope.Enter();
-                        if (window.SameBounds(Describe((nint)window.Id)) && GetAncestor(WindowFromPoint(from), 2) == (nint)window.Id)
-                            SetCursorPos(from.X, from.Y);
-                    }
-                    catch (InvalidOperationException) { }
-                }
-                Button(4);
+                // On cancellation return the drag to its source when still safe.
+                ReleaseAt(completed ? to : from);
             }
         }
         else
@@ -540,11 +577,11 @@ internal sealed class WindowsExternalDesktop : IExternalDesktop
             if (!finishSelection)
             {
                 await ExternalClickSequence.ClickAsync(() => MovePointer(from), () => Verify(from),
-                    () => { Button(2); inputStarted = true; }, () => Button(4), ct);
+                    () => { Button(2, from); inputStarted = true; }, () => ReleaseAt(from), ct);
                 await Task.Delay(180, ct);
             }
             await ExternalClickSequence.ClickAsync(() => MovePointer(to), () => Verify(to),
-                () => Button(2), () => Button(4), ct);
+                () => Button(2, to), () => ReleaseAt(to), ct);
             // Confirmation is driven by captured frames, not a fixed delay after the destination.
         }
     }
@@ -571,6 +608,7 @@ internal sealed class WindowsExternalDesktop : IExternalDesktop
     [DllImport("user32.dll")] private static extern nint WindowFromPoint(Point p);
     [DllImport("user32.dll")] private static extern nint GetAncestor(nint h, uint flags);
     [DllImport("user32.dll")] private static extern bool SetCursorPos(int x, int y);
+    [DllImport("user32.dll")] private static extern int GetSystemMetrics(int index);
     // INPUT's union is MOUSEINPUT-sized; native alignment supplies the padding
     // after Type on x64. Do not pack it to the x86 layout.
     [StructLayout(LayoutKind.Sequential)] private struct MouseInputEvent { public uint Type; public MouseInput Mouse; }
