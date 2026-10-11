@@ -369,6 +369,16 @@ public partial class ExternalSessionTests
         public int Captures { get; private set; }
         public int InputCount { get; private set; }
         public bool HoldInputs { get; set; }
+        public bool HoldInputPreparation { get; set; }
+        public TaskCompletionSource PreparationStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource PreparationCancelled { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public async Task PrepareInputAsync(CancellationToken ct)
+        {
+            PreparationStarted.TrySetResult();
+            if (!HoldInputPreparation) return;
+            try { await Task.Delay(Timeout.InfiniteTimeSpan, ct); }
+            finally { PreparationCancelled.TrySetResult(); }
+        }
         public int IgnoreInputs { get; set; }
         public bool SelectOnIgnoredInput { get; set; }
         public bool PulseEveryCapture { get; set; }
@@ -457,6 +467,7 @@ public partial class ExternalSessionTests
         private int _count;
         public int Count => Volatile.Read(ref _count);
         public bool BlockFirst { get; set; }
+        public TaskCompletionSource ReleaseFirst { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public ConcurrentQueue<PreflightModelRequest> Requests { get; } = new();
         public TaskCompletionSource FirstRequest { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource FirstCancelled { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -475,7 +486,7 @@ public partial class ExternalSessionTests
             FirstRequest.TrySetResult();
             if (count == 1 && BlockFirst)
             {
-                try { await Task.Delay(Timeout.InfiniteTimeSpan, ct); }
+                try { await ReleaseFirst.Task.WaitAsync(ct); }
                 catch (OperationCanceledException) { FirstCancelled.TrySetResult(); throw; }
             }
             var json = JsonSerializer.Serialize(new

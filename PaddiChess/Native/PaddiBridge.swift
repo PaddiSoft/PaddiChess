@@ -485,8 +485,23 @@ func captureServer(raw:Bool = false) {
         }
     }
 }
-let args = CommandLine.arguments
+var args = CommandLine.arguments
 if args.count < 2 { fail("缺少操作") }
+if args[1] == "move-ready" {
+    // Pay framework/process startup during search. No target, activation,
+    // pointer event or stale geometry is retained; consume exactly one request.
+    _ = NSWorkspace.shared.frontmostApplication
+    _ = NSApplication.shared
+    _ = AXIsProcessTrusted()
+    print("ready"); fflush(stdout)
+    guard let line = readLine(), let data = line.data(using:.utf8),
+          let request = try? JSONDecoder().decode([String].self,from:data),
+          request.first == "move" else { fail("落子准备已取消或输入无效") }
+    args = [args[0]] + request
+    // The idle helper blocks on stdin. Refresh workspace notifications before
+    // deciding whether activation is needed for this actual submission.
+    RunLoop.current.run(until:Date(timeIntervalSinceNow:0.001))
+}
 switch args[1] {
 case "recognize":
     try recognizeBoard()
@@ -594,6 +609,7 @@ case "move":
     let dragging = args.count >= 12 && args[11] == "drag"
     let finishSelection = args.count >= 12 && args[11] == "finish-click"
     var mouseHeld = false
+    var sourceReleasedAt: Double?
     defer {
         if mouseHeld { postMouse(.leftMouseUp,CGPoint(x:nums[6],y:nums[7])) }
     }
@@ -601,6 +617,14 @@ case "move":
         let point=CGPoint(x:nums[i], y:nums[i+1])
         verifyVisible(point,target:target)
         if directed && (!dragging || i == 4) { prepareDirectedPointer(point,target:target) }
+        if !dragging, let releasedAt = sourceReleasedAt {
+            // Destination hover can settle while the game processes source
+            // selection. Preserve the full 180 ms up-to-down interval without
+            // adding another 123 ms of directed-pointer preparation after it.
+            let remaining = 0.18 - (ProcessInfo.processInfo.systemUptime - releasedAt)
+            if remaining > 0 { waitForInput(remaining) }
+        }
+        verifyVisible(point,target:target)
         if dragging {
             if i == 4 {
                 heldPoint = point; mouseHeld = true
@@ -625,10 +649,17 @@ case "move":
             waitForInput(directed ? 0.075 : 0.060)
             postMouse(.leftMouseUp,point)
             heldPoint = nil
+            if i == 4 {
+                sourceReleasedAt = ProcessInfo.processInfo.systemUptime
+                // Frame-polled views may consume source-up after the native
+                // event returns. Leave two 30 Hz frames at the source before
+                // beginning destination hover; overlap only the remaining gap.
+                if directed { waitForInput(0.075) }
+            }
         }
         // Keep the source-selection interval for games and mirrored-device input;
         // the GUI keeps observing throughout this pacing interval.
-        if i == 4 { waitForInput(0.18) }
+        if i == 4 && dragging { waitForInput(0.18) }
     }
     // Keep the temporary context alive while a throttled background game
     // consumes the destination up event. Immediate deactivation can discard it.

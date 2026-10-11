@@ -25,15 +25,64 @@ public partial class ExternalSessionTests
         });
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task IndependentVerificationFinishesDuringThinkingBeforeInputIsArmed(int delivery)
+    {
+        await WithPreflightAsync(false, true, async fixture =>
+        {
+            fixture.Model!.BlockFirst = true;
+            fixture.Window.FindControl<ComboBox>("ExternalDeliveryBox")!.SelectedIndex = delivery;
+            var reader = new DelayedPositionRecognizer();
+            Set(fixture.Window, "_positionRecognizer", reader);
+            await fixture.ConnectAsync();
+            await fixture.Model.FirstRequest.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            // No move exists yet, and connection alone must never send input.
+            await reader.Started.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            Assert.Null(Get<object?>(fixture.Window, "_externalPreparedDecision"));
+            Assert.Equal(0, fixture.Desktop.InputCount);
+            reader.Release.TrySetResult();
+            await reader.Completed.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            fixture.Model.ReleaseFirst.TrySetResult();
+            await WaitPreflightAsync(() => Get<object?>(fixture.Window, "_externalPreparedDecision") != null, fixture.Window);
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            Click(fixture.Window, "ExternalStartButton");
+            await fixture.Desktop.FirstInput.Task.WaitAsync(TimeSpan.FromSeconds(1.5));
+            _latencyOutput.WriteLine($"Preverified model decision to input: {clock.Elapsed.TotalMilliseconds:F1} ms");
+            Assert.Equal(1, reader.Verifications);
+            Assert.Equal(1, fixture.Model.Count);
+        });
+    }
+
+    [Fact]
+    public async Task OptionalInputWarmupCannotDelayAReadyMoveAndIsCancelledOnStop()
+    {
+        await WithPreflightAsync(false, true, async fixture =>
+        {
+            fixture.Desktop.HoldInputPreparation = true;
+            await fixture.ConnectAsync();
+            await fixture.Desktop.PreparationStarted.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            await WaitPreflightAsync(() => Get<object?>(fixture.Window, "_externalPreparedDecision") != null, fixture.Window);
+            Assert.Equal(0, fixture.Desktop.InputCount);
+            Click(fixture.Window, "ExternalStartButton");
+            await fixture.Desktop.FirstInput.Task.WaitAsync(TimeSpan.FromSeconds(1.5));
+            Assert.False(fixture.Desktop.PreparationCancelled.Task.IsCompleted);
+            Get<CancellationTokenSource>(fixture.Window, "_externalCancellation").Cancel();
+            await fixture.Desktop.PreparationCancelled.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        });
+    }
+
     [Fact]
     public async Task SlowPreInputRecognitionDoesNotBlockCaptureOrRepeatEngineCalculation()
     {
         await WithPreflightAsync(false, true, async fixture =>
         {
-            await fixture.ConnectAsync();
-            await WaitPreflightAsync(() => Get<object?>(fixture.Window, "_externalPreparedDecision") != null, fixture.Window);
             var reader = new DelayedPositionRecognizer();
             Set(fixture.Window, "_positionRecognizer", reader);
+            await fixture.ConnectAsync();
+            await WaitPreflightAsync(() => Get<object?>(fixture.Window, "_externalPreparedDecision") != null, fixture.Window);
             Click(fixture.Window, "ExternalStartButton");
             await reader.Started.Task.WaitAsync(TimeSpan.FromSeconds(3));
             var captures = fixture.Desktop.Captures;
@@ -82,12 +131,20 @@ public partial class ExternalSessionTests
     {
         public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Completed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int Verifications { get; private set; }
         public async Task<SkinRecognition?> ReadAsync(ExternalFrame frame, BoardCalibration geometry,
             bool redToMove, CancellationToken ct, bool detectOrientation, BoardSkin? sessionSkin, string? customPath)
         {
-            Started.TrySetResult();
-            await Release.Task.WaitAsync(ct);
-            return await new SyntheticPositionRecognizer().ReadAsync(frame, geometry, redToMove, ct, detectOrientation, sessionSkin, customPath);
+            if (!detectOrientation)
+            {
+                Verifications++;
+                Started.TrySetResult();
+                await Release.Task.WaitAsync(ct);
+            }
+            var result = await new SyntheticPositionRecognizer().ReadAsync(frame, geometry, redToMove, ct, detectOrientation, sessionSkin, customPath);
+            if (!detectOrientation) Completed.TrySetResult();
+            return result;
         }
     }
 

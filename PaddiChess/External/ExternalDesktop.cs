@@ -91,6 +91,9 @@ public interface IExternalDesktop
     bool EscapePressed();
     ExternalInputMode InputMode { get => ExternalInputMode.Click; set { } }
     ExternalInputDelivery InputDelivery { get => ExternalInputDelivery.SystemCursor; set { } }
+    // Preparation may initialize native infrastructure, but must not focus a
+    // window, move the pointer or post input. The move supplies fresh geometry.
+    Task PrepareInputAsync(CancellationToken ct) => Task.CompletedTask;
     Task CloseCaptureAsync() => Task.CompletedTask;
     Task<ExternalPermissions> GetPermissionsAsync(CancellationToken ct) => Task.FromResult(new ExternalPermissions(true,true));
     Task RequestPermissionAsync(ExternalPermission permission, CancellationToken ct) => Task.CompletedTask;
@@ -137,6 +140,43 @@ internal sealed class MacExternalDesktop : IExternalDesktop
     private CapturedPixels? _lastPixels;
     private Stream? _captureOutput;
     private readonly SemaphoreSlim _captureGate = new(1, 1);
+    private readonly SemaphoreSlim _inputGate = new(1, 1);
+    private Process? _preparedInput;
+    public async Task PrepareInputAsync(CancellationToken ct)
+    {
+        await _inputGate.WaitAsync(ct).ConfigureAwait(false);
+        Process? preparing = null;
+        try
+        {
+            if (_preparedInput is { HasExited: false }) return;
+            _preparedInput?.Dispose(); _preparedInput = null;
+            var start = new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "Native", "PaddiBridge"))
+            { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+            start.ArgumentList.Add("move-ready");
+            preparing = Process.Start(start) ?? throw new IOException("无法准备落子组件");
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            // Cold framework/code-signature initialization may take longer on
+            // a busy host. This deadline never holds up MoveCoreAsync.
+            timeout.CancelAfter(TimeSpan.FromSeconds(5));
+            if (await preparing.StandardOutput.ReadLineAsync(timeout.Token).ConfigureAwait(false) != "ready")
+                throw new IOException("落子组件尚未就绪");
+            _preparedInput = preparing; preparing = null;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (Exception) { /* Preparation is optional; the normal guarded one-shot path remains available. */ }
+        finally
+        {
+            StopPreparedInput(preparing);
+            _inputGate.Release();
+        }
+    }
+    private static void StopPreparedInput(Process? process)
+    {
+        if (process == null) return;
+        try { if (!process.HasExited) process.Kill(true); }
+        catch (InvalidOperationException) { } catch (System.ComponentModel.Win32Exception) { }
+        process.Dispose();
+    }
     private static void ValidateCaptureState(string? status, double callbackAgeMs)
     {
         // Legacy one-shot captures do not expose heartbeat metadata. New persistent
@@ -151,6 +191,9 @@ internal sealed class MacExternalDesktop : IExternalDesktop
     {
         await _captureGate.WaitAsync();
         try { StopCapture(); } finally { _captureGate.Release(); }
+        await _inputGate.WaitAsync().ConfigureAwait(false);
+        try { StopPreparedInput(_preparedInput); _preparedInput = null; }
+        finally { _inputGate.Release(); }
     }
     private void StopCapture()
     {
@@ -192,14 +235,14 @@ internal sealed class MacExternalDesktop : IExternalDesktop
     }
     private static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true };
     private static Task<string> RunAsync(CancellationToken ct, params string[] args) => RunHelperAsync(ct, args);
-    private static async Task<string> RunHelperAsync(CancellationToken ct, string[] args, Action? forcedTermination = null)
+    private static async Task<string> RunHelperAsync(CancellationToken ct, string[] args, Action? forcedTermination = null, Process? prepared = null)
     {
-        ct.ThrowIfCancellationRequested();
+        if (prepared == null) ct.ThrowIfCancellationRequested();
         var path = Path.Combine(AppContext.BaseDirectory, "Native", "PaddiBridge");
-        if (!File.Exists(path)) throw new FileNotFoundException("未找到屏幕接管组件，请重新编译或安装完整客户端。", path);
+        if (prepared == null && !File.Exists(path)) throw new FileNotFoundException("未找到屏幕接管组件，请重新编译或安装完整客户端。", path);
         var start = new ProcessStartInfo(path) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
         foreach (var arg in args) start.ArgumentList.Add(arg);
-        using var process = Process.Start(start) ?? throw new InvalidOperationException("无法启动屏幕接管组件");
+        using var process = prepared ?? Process.Start(start) ?? throw new InvalidOperationException("无法启动屏幕接管组件");
         var input = args.FirstOrDefault() == "move";
         using var reg = ct.Register(() =>
         {
@@ -208,7 +251,17 @@ internal sealed class MacExternalDesktop : IExternalDesktop
         });
         var output = process.StandardOutput.ReadToEndAsync(ct);
         var error = process.StandardError.ReadToEndAsync(ct);
-        try { await process.WaitForExitAsync(ct).ConfigureAwait(false); }
+        try
+        {
+            ct.ThrowIfCancellationRequested();
+            if (prepared != null)
+            {
+                await process.StandardInput.WriteLineAsync(JsonSerializer.Serialize(args).AsMemory(), ct).ConfigureAwait(false);
+                await process.StandardInput.FlushAsync(ct).ConfigureAwait(false);
+                process.StandardInput.Close();
+            }
+            await process.WaitForExitAsync(ct).ConfigureAwait(false);
+        }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             // Allow the helper to release a held button and restore the temporary
@@ -257,6 +310,19 @@ internal sealed class MacExternalDesktop : IExternalDesktop
         var inputDelivery = InputDelivery;
         try
         {
+            // Never queue a move behind optional warmup. If it has not finished,
+            // launch the usual one-shot helper and leave the warm one for later.
+            Process? prepared = null;
+            if (await _inputGate.WaitAsync(0, ct).ConfigureAwait(false))
+            {
+                try
+                {
+                    if (_preparedInput is { HasExited: false }) prepared = _preparedInput;
+                    else _preparedInput?.Dispose();
+                    _preparedInput = null;
+                }
+                finally { _inputGate.Release(); }
+            }
             await RunHelperAsync(ct, ["move", window.Id.ToString(), F(window.X), F(window.Y), F(window.Width), F(window.Height),
                 F(window.X + fromX), F(window.Y + fromY), F(window.X + toX), F(window.Y + toY), finishSelection ? "finish-click" : inputMode == ExternalInputMode.Drag ? "drag" : "click",
                 inputDelivery switch
@@ -264,7 +330,7 @@ internal sealed class MacExternalDesktop : IExternalDesktop
                     ExternalInputDelivery.TargetWindow => "window",
                     ExternalInputDelivery.TargetWindowFocused => "window-focused",
                     _ => "cursor"
-                }], () => forcedTermination = true);
+                }], () => forcedTermination = true, prepared);
         }
         finally
         {
