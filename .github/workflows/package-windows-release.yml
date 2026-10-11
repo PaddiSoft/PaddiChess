@@ -1,0 +1,96 @@
+name: Package Windows draft release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing draft release tag
+        required: true
+        type: string
+      source_commit:
+        description: Full verified source commit matching the draft release target
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-package-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.tag }}
+      SOURCE_COMMIT: ${{ inputs.source_commit }}
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - name: Require a draft tied to the verified source
+        shell: python {0}
+        run: |
+          import json, os, re, subprocess
+          release = json.loads(subprocess.check_output(['gh', 'release', 'view', os.environ['RELEASE_TAG'],
+              '--json', 'isDraft,targetCommitish,tagName'], text=True))
+          commit = os.environ['SOURCE_COMMIT']
+          assert re.fullmatch(r'[0-9a-f]{40}', commit)
+          assert re.fullmatch(r'v\d+\.\d+\.\d+', os.environ['RELEASE_TAG'])
+          assert release['isDraft'], 'Never replace a published installer'
+          assert release['tagName'] == os.environ['RELEASE_TAG']
+          assert release['targetCommitish'] == commit
+          assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() == commit
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install pinned native compiler
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://ziglang.org/download/0.13.0/zig-windows-x86_64-0.13.0.zip' -OutFile "$env:RUNNER_TEMP/zig.zip"
+          if ((Get-FileHash "$env:RUNNER_TEMP/zig.zip" -Algorithm SHA256).Hash -ne 'd859994725ef9402381e557c60bb57497215682e355204d754ee3df75ee3c158') { throw 'Zig checksum mismatch' }
+          Expand-Archive "$env:RUNNER_TEMP/zig.zip" "$env:RUNNER_TEMP/zig"
+          "$env:RUNNER_TEMP/zig/zig-windows-x86_64-0.13.0" | Out-File -FilePath $env:GITHUB_PATH -Append
+      - name: Build and audit the self-contained installer
+        shell: python {0}
+        run: |
+          import pathlib, shutil, subprocess, zipfile
+          bundle = pathlib.Path('dist/release-windows/Paddi象棋-Windows-x64')
+          subprocess.check_call(['python', 'scripts/audit-publication.py'])
+          subprocess.check_call(['dotnet', 'publish', 'PaddiChess/PaddiChess.csproj', '-p:RestoreLockedMode=true',
+              '-c', 'Release', '-r', 'win-x64', '--self-contained', 'true', '-o', str(bundle)])
+          for name in ['Engine/Pikafish-MacOS-universal', 'Engine/Pikafish-Linux-x86-64-universal', 'Native/PaddiBridge']:
+              assert not (bundle / name).exists(), 'Unexpected platform asset: ' + name
+          shutil.copyfile('PaddiChess/Packaging/Windows-Usage-and-Recommended-Settings.txt', bundle / '使用说明与推荐设置.txt')
+          subprocess.check_call(['python', 'scripts/audit-publication.py', '--release', str(bundle)])
+          archive = bundle.parent / 'PaddiChess-Windows-x64.zip'
+          with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as package:
+              for path in sorted(bundle.rglob('*')):
+                  if path.is_file():
+                      package.write(path, path.relative_to(bundle.parent).as_posix())
+          with zipfile.ZipFile(archive) as package:
+              assert package.testzip() is None, 'ZIP integrity check failed'
+      - name: Upload and verify the draft asset
+        shell: python {0}
+        run: |
+          import hashlib, json, os, pathlib, subprocess
+          tag = os.environ['RELEASE_TAG']
+          repository = os.environ['GITHUB_REPOSITORY']
+          def release():
+              releases = json.loads(subprocess.check_output(['gh', 'api', 'repos/' + repository + '/releases'], text=True))
+              found = next(r for r in releases if r['tag_name'] == tag)
+              assert found['draft'] and found['target_commitish'] == os.environ['SOURCE_COMMIT']
+              return found
+          release()
+          archive = pathlib.Path('dist/release-windows/PaddiChess-Windows-x64.zip')
+          subprocess.check_call(['gh', 'release', 'upload', tag, str(archive), '--clobber'])
+          asset = next(a for a in release()['assets'] if a['name'] == archive.name)
+          assert asset['state'] == 'uploaded' and asset['size'] == archive.stat().st_size
+          assert asset['digest'] == 'sha256:' + hashlib.sha256(archive.read_bytes()).hexdigest()
