@@ -30,6 +30,7 @@ jobs:
       RELEASE_TAG: ${{ inputs.tag }}
       SOURCE_COMMIT: ${{ inputs.source_commit }}
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      PYTHONUTF8: '1'
     steps:
       - uses: actions/checkout@v4
         with:
