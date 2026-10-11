@@ -30,6 +30,7 @@ internal static class PieceSilhouette
         ReadOnlySpan<double> radii = [.30, .34, .38, .42, .46];
         foreach (double oy in verticalOffsets)
         foreach (double ox in horizontalOffsets)
+        foreach (double radius in radii)
         {
             int count = 0;
             for (int ray = 0; ray < 24; ray++)
@@ -41,13 +42,13 @@ internal static class PieceSilhouette
                     int y = Math.Clamp((int)Math.Round(cy + (oy + sin * (radius + radial) + cos * tangent) * dy), 0, pixels.Height - 1);
                     return y * pixels.RowBytes + x * 4;
                 }
-                foreach (double radius in radii)
-                {
-                    int radial = Difference(Pixel(radius, -.025, 0), Pixel(radius, .025, 0));
-                    int tangent = Difference(Pixel(radius, 0, -.025), Pixel(radius, 0, .025));
-                    if (radial > 3 * 255 * 255 * .08 * .08 && radial > tangent * 1.8 * 1.8)
-                    { count++; break; }
-                }
+                // One radius and centre must explain the entire contour. Choosing
+                // a different radius on each ray joins unrelated grid/frame edges
+                // into a false disc beside an empty last-move marker.
+                int radial = Difference(Pixel(radius, -.025, 0), Pixel(radius, .025, 0));
+                int tangent = Difference(Pixel(radius, 0, -.025), Pixel(radius, 0, .025));
+                if (radial > 3 * 255 * 255 * .08 * .08 && radial > tangent * 1.8 * 1.8)
+                    count++;
             }
             best = Math.Max(best, count);
             if (best == 24) return best;

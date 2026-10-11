@@ -846,7 +846,10 @@ public partial class MainWindow
                         : identityRead?.Problem ?? inputVerification.LastFailure ?? "正在核验最新棋盘";
                     var status = $"计算已完成 · {reason}，核验后自动落子…";
                     ExternalStatusText.Text = status;
-                    if (lastVerificationStatus != status || sessionClock.Elapsed >= nextVerificationReport)
+                    // Animated samples can alternate between an uncertain cell and
+                    // no frame-bound result every poll. Do not flush a log entry at
+                    // capture rate while waiting for the same prepared decision.
+                    if (lastVerificationStatus == null || sessionClock.Elapsed >= nextVerificationReport)
                     {
                         lastVerificationStatus = status;
                         nextVerificationReport = sessionClock.Elapsed + TimeSpan.FromSeconds(3);
