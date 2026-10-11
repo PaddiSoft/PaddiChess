@@ -10,6 +10,68 @@ public class RecognitionRefreshTests
         ExternalBoardTests.Render(game), new(40, 40, 440, 490, false));
 
     [Fact]
+    public async Task RefreshDoesNotHideCompletedEvidenceWhileTheNextReadIsRunning()
+    {
+        var game = new XiangqiGame(); var frame = Frame(game);
+        var read = new SkinRecognition(game.CurrentFen(), [], 0, null);
+        await using var refresh = new ExternalRecognitionRefresh(CancellationToken.None, TimeSpan.Zero);
+        refresh.Seed("history", null, frame, read);
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Assert.True(refresh.TryStart("history", null, frame, TimeSpan.Zero, async ct =>
+        { started.SetResult(); await Task.Delay(Timeout.InfiniteTimeSpan, ct); return null; }));
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        // The final capture can match the completed read even if the main loop's
+        // preceding animation frame scheduled a refresh. It must not wait for it.
+        Assert.Same(read, refresh.Current("history", null, Frame(game)));
+        Assert.Null(refresh.Current("different history", null, frame));
+        Assert.Null(refresh.Current("history", "e3e4", frame));
+    }
+
+    [Fact]
+    public async Task ANewerConfidentConflictReplacesCompletedEvidence()
+    {
+        var game = new XiangqiGame(); var frame = Frame(game);
+        await using var refresh = new ExternalRecognitionRefresh(CancellationToken.None, TimeSpan.Zero);
+        refresh.Seed("history", null, frame, new(game.CurrentFen(), [], 0, null));
+        Assert.True(game.TryMoveUci("e3e4", out _));
+        var conflict = new SkinRecognition(game.CurrentFen(), [], 0, null);
+        Assert.True(refresh.TryStart("history", null, frame, TimeSpan.Zero, _ => Task.FromResult<SkinRecognition?>(conflict)));
+        for (var i = 0; i < 100 && refresh.IsRunning; i++) await Task.Delay(5);
+        Assert.Same(conflict, refresh.Current("history", null, frame));
+    }
+
+    [Fact]
+    public async Task TimedOutReadReleasesTheSingleFlightAndRetriesWithoutManualMove()
+    {
+        var game = new XiangqiGame(); var frame = Frame(game);
+        await using var refresh = new ExternalRecognitionRefresh(CancellationToken.None, TimeSpan.Zero, TimeSpan.FromMilliseconds(50));
+        Assert.True(refresh.TryStart("history", null, frame, TimeSpan.Zero, async ct =>
+        { await Task.Delay(Timeout.InfiniteTimeSpan, ct); return null; }));
+        for (var i = 0; i < 100 && refresh.IsRunning; i++) await Task.Delay(5);
+        Assert.False(refresh.IsRunning);
+        Assert.Null(refresh.Current("history", null, frame));
+        Assert.Contains("超时", refresh.LastFailure);
+        var read = new SkinRecognition(game.CurrentFen(), [], 0, null);
+        Assert.True(refresh.TryStart("history", null, frame, TimeSpan.FromSeconds(1), _ => Task.FromResult<SkinRecognition?>(read)));
+        for (var i = 0; i < 100 && refresh.IsRunning; i++) await Task.Delay(5);
+        Assert.Same(read, refresh.Current("history", null, frame));
+        Assert.Null(refresh.LastFailure);
+        Assert.Equal(2, refresh.CompletedAttempts);
+    }
+
+    [Fact]
+    public async Task ANewerUncertainReadCannotBeHiddenByOldConfidence()
+    {
+        var game = new XiangqiGame(); var frame = Frame(game);
+        await using var refresh = new ExternalRecognitionRefresh(CancellationToken.None, TimeSpan.Zero);
+        refresh.Seed("history", null, frame, new(game.CurrentFen(), [], 0, null));
+        var uncertain = new SkinRecognition(game.CurrentFen(), [new(0, 0)], .2, null);
+        Assert.True(refresh.TryStart("history", null, frame, TimeSpan.Zero, _ => Task.FromResult<SkinRecognition?>(uncertain)));
+        for (var i = 0; i < 100 && refresh.IsRunning; i++) await Task.Delay(5);
+        Assert.Same(uncertain, refresh.Current("history", null, frame));
+    }
+
+    [Fact]
     public async Task RecoveryIsSingleFlightAndReclassifiesChangesWithoutReusingOldHistory()
     {
         var game = new XiangqiGame(); var original = Frame(game);

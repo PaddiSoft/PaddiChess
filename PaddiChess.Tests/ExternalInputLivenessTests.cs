@@ -95,6 +95,48 @@ public partial class ExternalSessionTests
         });
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task StalledVerificationRetriesAndSendsThePreparedMoveWithoutManualPlay(int delivery)
+    {
+        await WithPreflightAsync(false, true, async fixture =>
+        {
+            fixture.Window.FindControl<ComboBox>("ExternalDeliveryBox")!.SelectedIndex = delivery;
+            var reader = new FirstVerificationStallsRecognizer();
+            Set(fixture.Window, "_positionRecognizer", reader);
+            await fixture.ConnectAsync();
+            await reader.Started.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            await WaitPreflightAsync(() => Get<object?>(fixture.Window, "_externalPreparedDecision") != null, fixture.Window);
+            Click(fixture.Window, "ExternalStartButton");
+            await reader.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await fixture.Desktop.FirstInput.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            Assert.Equal(1, fixture.Model!.Count);
+            Assert.Equal(1, fixture.Desktop.InputCount);
+            Assert.True(reader.Verifications >= 2);
+        });
+    }
+
+    private sealed class FirstVerificationStallsRecognizer : IExternalPositionRecognizer
+    {
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Cancelled { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int Verifications;
+        public async Task<SkinRecognition?> ReadAsync(ExternalFrame frame, BoardCalibration geometry,
+            bool redToMove, CancellationToken ct, bool detectOrientation, BoardSkin? sessionSkin, string? customPath)
+        {
+            if (!detectOrientation && Interlocked.Increment(ref Verifications) == 1)
+            {
+                Started.TrySetResult();
+                try { await Task.Delay(Timeout.InfiniteTimeSpan, ct); }
+                finally { Cancelled.TrySetResult(); }
+            }
+            return await new SyntheticPositionRecognizer().ReadAsync(frame, geometry, redToMove, ct,
+                detectOrientation, sessionSkin, customPath);
+        }
+    }
+
     [Fact]
     public async Task VisibleSourceSelectionAllowsDestinationRetryWithoutReselectingSource()
     {

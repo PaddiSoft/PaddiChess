@@ -446,6 +446,7 @@ public partial class MainWindow
         await using var inputVerification = new ExternalRecognitionRefresh(ct, TimeSpan.FromMilliseconds(250));
         var inputRetry = new ExternalInputRetry();
         string? lastVerificationStatus = null;
+        var nextVerificationReport = TimeSpan.Zero;
         BoardObservation? submittedFrame = null;
         async Task<Exception?> SendInputAsync(double fx, double fy, double tx, double ty, bool finishSelection = false)
         {
@@ -840,14 +841,19 @@ public partial class MainWindow
                     inputVerification.TryStart(verificationIdentity, null, check, sessionClock.Elapsed,
                         token => _positionRecognizer.ReadAsync(beforeClick, verificationGeometry, verificationTurn,
                             token, false, verificationSkin, verificationPath));
-                    var status = identityRead is { Uncertain.Count: > 0 }
-                        ? $"计算已完成 · 正在核验 {identityRead.Uncertain.Count} 个不确定位置，暂未发送落子。"
-                        : "计算已完成 · 正在核验最新棋盘，核验后落子…";
+                    var reason = identityRead is { Uncertain.Count: > 0 }
+                        ? $"正在核验 {identityRead.Uncertain.Count} 个不确定位置"
+                        : identityRead?.Problem ?? inputVerification.LastFailure ?? "正在核验最新棋盘";
+                    var status = $"计算已完成 · {reason}，核验后自动落子…";
                     ExternalStatusText.Text = status;
-                    if (lastVerificationStatus != status)
+                    if (lastVerificationStatus != status || sessionClock.Elapsed >= nextVerificationReport)
                     {
                         lastVerificationStatus = status;
-                        await RecordExternalHistoryAsync("verification", status, move: chosen, observedFen: identityRead?.Fen);
+                        nextVerificationReport = sessionClock.Elapsed + TimeSpan.FromSeconds(3);
+                        await RecordExternalHistoryAsync("verification", status +
+                            $" · 已完成 {inputVerification.CompletedAttempts} 次核验 · 上次 {inputVerification.LastDuration.TotalMilliseconds:F0} ms" +
+                            (identityRead is { Uncertain.Count: > 0 } ? " · 位置 " + string.Join(' ', identityRead.Uncertain.Select(s => s.Uci)) : ""),
+                            move: chosen, observedFen: identityRead?.Fen);
                     }
                     continue;
                 }
