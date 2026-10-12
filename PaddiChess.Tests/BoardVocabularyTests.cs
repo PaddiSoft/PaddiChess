@@ -61,6 +61,27 @@ public class BoardVocabularyTests
         Assert.Equal(new[] { "a9a8" }, gate.Moves); // Host must synchronize before sending its old decision.
     }
 
+    [Fact]
+    public async Task SparseVocabularyDoesNotHideAnImpossiblePieceAsEmpty()
+    {
+        var game = new XiangqiGame();
+        game.LoadFen("4k4/3PaP3/9/9/9/9/9/5K3/9/9 w - - 0 1");
+        var source = Frame(game);
+        await using var refresh = new ExternalRecognitionRefresh(CancellationToken.None);
+        refresh.Seed("history", null, source, new(game.CurrentFen(), [], 0, null));
+        // Simulate a bad grid/animation placing the advisor on e7: inside the
+        // palace but outside its reachable diagonals. Its pixels must remain
+        // evidence of a conflict, rather than being excluded before comparison.
+        var invalid = new XiangqiGame(); invalid.LoadFen(game.CurrentFen());
+        invalid.Board[1, 4] = '\0'; invalid.Board[2, 4] = 'a';
+        var read = refresh.Current("history", null, Frame(invalid));
+        Assert.NotNull(read);
+        Assert.False(read.Confident);
+        Assert.Contains(new Square(4, 2), read.Uncertain);
+        var observed = new XiangqiGame(); observed.LoadFen(read.Fen);
+        Assert.Equal('a', observed.Board[2, 4]);
+    }
+
     private static BoardObservation Frame(XiangqiGame game) =>
         BoardObservation.Read(ExternalBoardTests.Render(game), new(40, 40, 440, 490, false));
 }

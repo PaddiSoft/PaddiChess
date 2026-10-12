@@ -77,8 +77,12 @@ public sealed record BoardSkin(string Name, Dictionary<char, List<float[]>> Samp
         for (int i = 0; i < 90; i++)
         {
             if (knownPieces?[i] is { } known) { board[i] = known; continue; }
-            var square = new Square(i % 9, i / 9);
-            var ranked = Samples.Where(pair => !restrictSquares || PositionSetup.CanOccupySquare(pair.Key, square))
+            // Compare visual identities before applying placement rules. Filtering
+            // first leaves only "empty" on many sparse-board squares, making the
+            // runner-up margin impossible even when the pixels match perfectly.
+            // Forbidden identities are also useful negative evidence: do not hide
+            // a misplaced/animated piece by removing it from the competition.
+            var ranked = Samples
                 .Select(pair => (Piece: pair.Key, Error: Distance(pair.Key, image.Cells[i])))
                 .OrderBy(p => p.Error).ToArray();
             if (ranked[0].Error > .04 || ranked.Length > 1 && ranked[1].Error - ranked[0].Error < .018)
@@ -105,7 +109,8 @@ public sealed record BoardSkin(string Name, Dictionary<char, List<float[]>> Samp
             // incompatible vocabulary is rejected below, never published as a board.
             board[i] = best.Piece; worst = Math.Max(worst, best.Error);
             rankedCells[i] = ranked;
-            if (best.Error > .10 || ranked.Length < 2 || ranked[1].Error - best.Error < .012)
+            if (best.Error > .10 || ranked.Length < 2 || ranked[1].Error - best.Error < .012 ||
+                restrictSquares && !PositionSetup.CanOccupySquare(best.Piece, new Square(i % 9, i / 9)))
                 uncertain.Add(new Square(i % 9, i / 9));
         }
         if (restrictSquares && knownPieces is null)

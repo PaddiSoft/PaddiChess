@@ -9,6 +9,41 @@ namespace PaddiXiangqi.Tests;
 public partial class ExternalSessionTests
 {
     [Theory]
+    [InlineData(false, 0)]
+    [InlineData(false, 1)]
+    [InlineData(false, 2)]
+    [InlineData(true, 0)]
+    [InlineData(true, 1)]
+    [InlineData(true, 2)]
+    public async Task SparsePositionWithChangingEmptyPixelsSendsPreparedMovePromptly(bool flipped, int delivery)
+    {
+        const string fen = "4k4/3PaP3/9/9/9/9/9/5K3/9/9 w - - 0 1";
+        await WithPreflightAsync(flipped, true, async fixture =>
+        {
+            fixture.Window.FindControl<ComboBox>("ExternalDeliveryBox")!.SelectedIndex = delivery;
+            // Import a manually confirmed puzzle: its orientation/turn cannot
+            // be inferred from the distribution of five remaining pieces.
+            fixture.Window.FindControl<CheckBox>("ExternalAutoTurnCheck")!.IsChecked = false;
+            fixture.Window.FindControl<ComboBox>("ExternalTurnBox")!.SelectedIndex = 0;
+            await (Task)typeof(MainWindow).GetMethod("ApplyExternalPositionAsync", Private)!
+                .Invoke(fixture.Window, [fen, CancellationToken.None])!;
+            typeof(MainWindow).GetMethod("BeginExternalObservation", Private)!.Invoke(fixture.Window, [false]);
+            await WaitPreflightAsync(() => Get<object?>(fixture.Window, "_externalPreparedDecision") != null, fixture.Window);
+            // None of this position's piece types can legally occupy b1. The
+            // old prefilter therefore left only "empty", which failed the
+            // runner-up check on every fresh frame despite a correct full read.
+            fixture.Desktop.PulseSquare = new Square(1, 8);
+            fixture.Desktop.PulseEveryCapture = true;
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            Click(fixture.Window, "ExternalStartButton");
+            await fixture.Desktop.FirstInput.Task.WaitAsync(TimeSpan.FromSeconds(1.5));
+            _latencyOutput.WriteLine($"Sparse board / flipped={flipped} / delivery={delivery}: {clock.Elapsed.TotalMilliseconds:F1} ms to input");
+            Assert.Equal(1, fixture.Model!.Count);
+            Assert.Equal(1, fixture.Desktop.InputCount);
+        }, initialFen: fen);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task PreparedMoveExecutesDespiteContinuouslyChangingSelectionColours(bool flipped)

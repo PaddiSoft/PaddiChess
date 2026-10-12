@@ -283,7 +283,8 @@ public partial class ExternalSessionTests
         Assert.True(condition(), window.FindControl<TextBlock>("ExternalStatusText")!.Text);
     }
 
-    private static async Task WithPreflightAsync(bool flipped, bool model, Func<PreflightFixture, Task> test)
+    private static async Task WithPreflightAsync(bool flipped, bool model, Func<PreflightFixture, Task> test,
+        string? initialFen = null)
     {
         await Session.Dispatch(async () =>
         {
@@ -306,6 +307,7 @@ public partial class ExternalSessionTests
             }.Save();
             var window = new MainWindow();
             var desktop = new PreflightDesktop(flipped);
+            if (initialFen is not null) desktop.LoadFen(initialFen);
             var handler = model ? new PreflightModelHandler() : null;
             using var http = handler is null ? null : new HttpClient(handler);
             try
@@ -321,7 +323,7 @@ public partial class ExternalSessionTests
                 var geometry = new BoardCalibration(40, 40, 440, 490, flipped);
                 Set(window, "_externalCalibration", geometry);
                 Set(window, "_externalSessionSkin", BoardSkin.Learn("preflight fixture",
-                    BoardObservation.Read(first.Png, geometry), desktop.Game));
+                    BoardObservation.Read(first.Png, geometry), desktop.Game, requireAllPieces: initialFen is null));
                 if (model)
                 {
                     Set(window, "_llmClient", new LlmChessClient(http!));
@@ -382,6 +384,7 @@ public partial class ExternalSessionTests
         public int IgnoreInputs { get; set; }
         public bool SelectOnIgnoredInput { get; set; }
         public bool PulseEveryCapture { get; set; }
+        public Square PulseSquare { get; set; } = new(0, 0);
         public int CompletionAttempts { get; private set; }
         public bool CanCompleteSelectedMove => true;
         private Square? _selected;
@@ -421,9 +424,14 @@ public partial class ExternalSessionTests
             if (_selected is { } selection)
                 png = PulsePiece(png, selection, flipped, 20);
             else if (PulseEveryCapture)
-                png = PulsePiece(png, new Square(0, 0), flipped, Captures % 2 == 0 ? 7 : 18);
+                png = PulsePiece(png, PulseSquare, flipped, Captures % 2 == 0 ? 7 : 18);
             CaptureSizes.Add((480 * BackingScale, 530 * BackingScale, Target));
             return new ExternalFrame(Target, png);
+        }
+        public void LoadFen(string fen)
+        {
+            Game.LoadFen(fen);
+            _png = ExternalBoardTests.Render(Game, flipped);
         }
         public void Advance(string move)
         {
