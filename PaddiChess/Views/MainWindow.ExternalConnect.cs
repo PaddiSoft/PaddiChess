@@ -39,6 +39,7 @@ public partial class MainWindow
             // targets must re-infer turn/orientation instead of inheriting it.
             var newGame = _externalCompleted || (!useCurrentTarget &&
                 (_externalFrame?.Window.Id != target.Id || _externalFrame?.Window.Pid != target.Pid));
+            if (newGame) _externalManualPosition = null;
             if (newGame && ExternalAutoTurnCheck.IsChecked == true)
             { _externalRequestedTurn = null; _externalTurnKnown = false; }
             ExternalStatusText.Text = "正在读取棋盘并同步局面…";

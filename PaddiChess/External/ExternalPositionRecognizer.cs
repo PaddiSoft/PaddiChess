@@ -40,7 +40,7 @@ public sealed class ExternalPositionRecognizer : IExternalPositionRecognizer
         catch (Exception ex) when (ex is IOException or OnnxRuntimeException) { return read; }
     }
 
-    private static SkinRecognition Supplement(CapturedPixels pixels, BoardCalibration geometry,
+    internal static SkinRecognition Supplement(CapturedPixels pixels, BoardCalibration geometry,
         LocalBoardClassifier.Prediction prediction, SkinRecognition original, LocalGlyphOcr.Glyph[] ocr,
         bool redToMove, bool detectOrientation)
     {
@@ -66,13 +66,30 @@ public sealed class ExternalPositionRecognizer : IExternalPositionRecognizer
             var glyph = ocr[display]; var piece = candidates[i];
             if (piece == '\0' || glyph.Confidence < LocalBoardClassifier.MinimumConfidence ||
                 !LocalGlyphOcr.IsReliable(glyph) || supplement.Uncertain.Contains(new Square(i % 9, i / 9))) continue;
-            // Different identities remain disputed. A matching glyph type can
-            // resolve a weak side classification using independent colour evidence.
-            if (resolved[i] is not ('\0' or 'x') && char.ToUpperInvariant(resolved[i]) != char.ToUpperInvariant(piece)) continue;
+            // OCR can arbitrate an impossible excess class (e.g. a third rook),
+            // but only when the entire competing group has reliable independent
+            // glyph evidence and its replacement gives a valid complete board.
+            // Ordinary identity disagreements still remain disputed.
+            if (resolved[i] is not ('\0' or 'x') && char.ToUpperInvariant(resolved[i]) != char.ToUpperInvariant(piece) &&
+                !CanResolveExcess(prediction, supplement, ocr, candidates, resolved[i])) continue;
             resolved[i] = piece; confidence[i] = glyph.Confidence;
         }
         return new LocalBoardClassifier.Prediction(resolved, confidence, prediction.RedAtTop, prediction.VisibleEmptyGrid)
             .ToRecognition(redToMove, detectOrientation);
+    }
+
+    private static bool CanResolveExcess(LocalBoardClassifier.Prediction prediction, SkinRecognition supplement,
+        LocalGlyphOcr.Glyph[] glyphs, char[] candidates, char originalPiece)
+    {
+        var competing = Enumerable.Range(0, 90).Where(i => prediction.Pieces[i] == originalPiece).ToArray();
+        if (competing.Length <= PositionSetup.MaximumCount(originalPiece) || supplement.Problem != null ||
+            candidates.Count(p => p == originalPiece) > PositionSetup.MaximumCount(originalPiece)) return false;
+        return competing.All(i =>
+        {
+            var display = prediction.RedAtTop ? 89 - i : i;
+            return LocalGlyphOcr.IsReliable(glyphs[display]) && candidates[i] != '\0' &&
+                !supplement.Uncertain.Contains(new Square(i % 9, i / 9));
+        });
     }
 
     public Task<SkinRecognition?> ReadTemplatesAsync(BoardObservation observation, bool redToMove,

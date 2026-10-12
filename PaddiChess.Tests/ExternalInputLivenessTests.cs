@@ -8,6 +8,42 @@ namespace PaddiXiangqi.Tests;
 
 public partial class ExternalSessionTests
 {
+    [Fact]
+    public async Task AdoptedEditorCorrectionSurvivesRepeatedModelErrorAndAllowsInput()
+    {
+        const string fen = "9/4c1P2/3kb4/2C6/3P5/9/9/4BA3/4pnppc/2BKnrrpp w - - 0 1";
+        await WithPreflightAsync(false, true, async fixture =>
+        {
+            fixture.Window.FindControl<CheckBox>("ExternalAutoTurnCheck")!.IsChecked = false;
+            fixture.Window.FindControl<ComboBox>("ExternalTurnBox")!.SelectedIndex = 0;
+            var editing = (Task)typeof(MainWindow).GetMethod("ShowExternalPositionEditorAsync", Private)!
+                .Invoke(fixture.Window, [fen.Replace("rrpp", "rrpr"), "模拟独立模型误读", new[] { new Square(8, 9) }, false])!;
+            var editor = fixture.Window.OwnedWindows.OfType<ExternalPositionEditorWindow>().Single();
+            editor.Editor.SelectPiece('p'); editor.Editor.Click(new(8, 9));
+            editor.FindControl<Button>("ExternalEditorAccept")!
+                .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            await editing.WaitAsync(TimeSpan.FromSeconds(3));
+            Assert.NotNull(Get<ExternalManualPosition?>(fixture.Window, "_externalManualPosition"));
+            Set(fixture.Window, "_positionRecognizer", new WrongPawnPositionRecognizer());
+            typeof(MainWindow).GetMethod("BeginExternalObservation", Private)!.Invoke(fixture.Window, [false]);
+            await WaitPreflightAsync(() => Get<object?>(fixture.Window, "_externalPreparedDecision") != null, fixture.Window);
+            Click(fixture.Window, "ExternalStartButton");
+            await fixture.Desktop.FirstInput.Task.WaitAsync(TimeSpan.FromSeconds(1.5));
+            Assert.Equal(1, fixture.Model!.Count); Assert.Equal(1, fixture.Desktop.InputCount);
+        }, initialFen: fen);
+    }
+
+    private sealed class WrongPawnPositionRecognizer : IExternalPositionRecognizer
+    {
+        public async Task<SkinRecognition?> ReadAsync(ExternalFrame frame, BoardCalibration geometry,
+            bool redToMove, CancellationToken ct, bool detectOrientation, BoardSkin? sessionSkin, string? customPath)
+        {
+            var read = await new SyntheticPositionRecognizer().ReadAsync(frame, geometry, redToMove, ct, false, null, null);
+            return read! with { Fen = read.Fen.Replace("rrpp", "rrpr"),
+                Uncertain = [new(5, 9), new(6, 9), new(8, 9)], Problem = "黑车超过允许数量 2。" };
+        }
+    }
+
     [Theory]
     [InlineData(false, 0)]
     [InlineData(false, 1)]

@@ -32,7 +32,7 @@
             <Button x:Name="ExternalEditorClear" Content="清空棋盘" Margin="0,0,0,4"/>
           </WrapPanel>
           <TextBlock x:Name="ExternalEditorToolHint" TextWrapping="Wrap" FontSize="12" Foreground="#42618B"/>
-          <TextBlock Text="数量为已摆 / 上限。先点棋子，再点目标位置移动；移到已有棋子上会替换它。"
+          <TextBlock Text="棋子栏：连续放置或覆盖已有棋子。移动工具：先选棋子，再点目标格。数量为已摆 / 上限。"
                      TextWrapping="Wrap" FontSize="11" Foreground="#65748A"/>
         </StackPanel>
       </Grid>

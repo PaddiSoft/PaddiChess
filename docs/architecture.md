@@ -59,6 +59,7 @@ flowchart TD
 | `Sessions/ExternalRecognitionRefresh.cs` | 后台完整识别与请求身份 |
 | `External/ExternalDesktop.cs` | 平台接口与 macOS／Windows 后端 |
 | `External/ExternalPositionRecognizer.cs` | 象棋专用模型与局部 OCR 补识入口 |
+| `External/ExternalManualPosition.cs` | 用户明确采用的标签与原始字形、窗口、网格绑定；变化格不沿用 |
 | `External/ExternalMoveConfirmation.cs` | 稳定落点确认 |
 | `External/ExternalMoveRecovery.cs` | 近期错误匹配的恢复检查点 |
 | `Services/ExternalHistoryStore.cs` | 有界串行日志、原子棋谱快照与历史读取 |

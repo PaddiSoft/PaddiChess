@@ -64,6 +64,14 @@ public sealed class PositionEditorState
             if (Board[square.Rank, square.File] != '\0') Remember();
             Board[square.Rank, square.File] = '\0';
         }
+        else if (Tool == PositionEditorTool.Place)
+        {
+            // A palette selection is an explicit replacement tool, including
+            // occupied squares. Repainting the same identity is a no-op.
+            if (Board[square.Rank, square.File] != PlacementPiece && CanAdd(PlacementPiece))
+            { Remember(); Board[square.Rank, square.File] = PlacementPiece; }
+            if (!CanAdd(PlacementPiece)) ResetSelection(PositionEditorTool.Move);
+        }
         else if (SelectedSquare is { } from)
         {
             if (from != square)
@@ -79,11 +87,6 @@ public sealed class PositionEditorState
         {
             ResetSelection(PositionEditorTool.Move);
             SelectedSquare = square; // Keep the selected piece visible until its destination is chosen.
-        }
-        else if (Tool == PositionEditorTool.Place)
-        {
-            if (CanAdd(PlacementPiece)) { Remember(); Board[square.Rank, square.File] = PlacementPiece; }
-            if (!CanAdd(PlacementPiece)) ResetSelection(PositionEditorTool.Move);
         }
         Notify();
     }

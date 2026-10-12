@@ -65,14 +65,23 @@ public class PositionEditorStateTests
     }
 
     [Fact]
-    public void ClickingExistingPieceWhilePlacingSelectsItInsteadOfReplacingOrErasingIt()
+    public void PaletteReplacesExistingPieceAndRemainsSelectedUntilQuotaIsFull()
     {
-        var board = new char[10, 9]; board[4, 4] = 'n';
+        var board = new char[10, 9]; board[9, 8] = 'r';
+        board[8, 4] = board[8, 6] = board[8, 7] = 'p';
         var editor = new PositionEditorState(board);
-        editor.SelectPiece('P'); editor.Click(new(4, 4));
-        Assert.Equal('n', board[4, 4]); Assert.Equal(0, PositionSetup.CountPieces(board, 'P'));
+        Assert.True(editor.SelectPiece('p')); editor.Click(new(8, 9));
+        Assert.Equal('p', board[9, 8]); Assert.Equal(4, PositionSetup.CountPieces(board, 'p'));
+        Assert.Equal(PositionEditorTool.Place, editor.Tool); Assert.Null(editor.SelectedSquare);
+        editor.Click(new(8, 9)); // Same identity is a no-op, including undo history.
+        Assert.Equal(4, PositionSetup.CountPieces(board, 'p'));
+        editor.Click(new(7, 9));
+        Assert.Equal(5, PositionSetup.CountPieces(board, 'p'));
         Assert.Equal(PositionEditorTool.Move, editor.Tool);
-        editor.Click(new(4, 4)); Assert.Null(editor.SelectedSquare); Assert.Equal('n', board[4, 4]);
+        Assert.False(editor.CanAdd('p'));
+        editor.Undo(); Assert.Equal(4, PositionSetup.CountPieces(board, 'p'));
+        editor.Undo(); Assert.Equal('r', board[9, 8]); Assert.Equal(3, PositionSetup.CountPieces(board, 'p'));
+        Assert.False(editor.CanUndo);
     }
 
     [Fact]
@@ -110,6 +119,40 @@ public class PositionEditorStateTests
 public class PositionEditorInteractionTests
 {
     private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ClickingPawnPaletteThenMisreadRookReplacesItAndUpdatesQuota(bool flipped)
+    {
+        await ExternalSessionTests.Session.Dispatch(async () =>
+        {
+            const string wrong = "9/4c1P2/3kb4/2C6/3P5/9/9/4BA3/4pnppc/2BKnrrpr w - - 0 1";
+            var window = new ExternalPositionEditorWindow(new(wrong, "校对局面", [new(8, 9)], null, null, flipped, 0),
+                null, (_, _, _, _, _) => Task.FromResult<SkinRecognition?>(null), default);
+            try
+            {
+                window.Show(); window.UpdateLayout();
+                var board = window.FindControl<BoardView>("ExternalEditorBoard")!;
+                var palette = window.FindControl<PiecePaletteView>("ExternalEditorPalette")!;
+                var pawn = PaletteButtons(palette).Single(b => ((PiecePaletteItemViewModel)b.DataContext!).Piece == 'p');
+                var accept = window.FindControl<Button>("ExternalEditorAccept")!;
+                Assert.False(accept.IsEnabled); Assert.True(pawn.IsEnabled);
+                pawn.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                ClickSquare(window, board, new(8, 9));
+                Assert.Equal('p', board.SetupBoard![9, 8]);
+                Assert.Equal(5, PositionSetup.CountPieces(board.SetupBoard, 'p'));
+                Assert.Equal(2, PositionSetup.CountPieces(board.SetupBoard, 'r'));
+                Assert.False(pawn.IsEnabled); Assert.True(accept.IsEnabled);
+                window.FindControl<Button>("ExternalEditorUndo")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Assert.Equal('r', board.SetupBoard[9, 8]);
+                Assert.True(pawn.IsEnabled); Assert.False(accept.IsEnabled);
+            }
+            finally { window.Close(); }
+            await Task.CompletedTask;
+            return true;
+        }, default);
+    }
 
     [Theory]
     [InlineData(860, 700, false)]

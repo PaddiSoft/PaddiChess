@@ -14,6 +14,43 @@ public class VerificationStallTests(ITestOutputHelper output)
     [Theory]
     [InlineData(1)]
     [InlineData(.5)]
+    public async Task PawnBesideTwoRooksIsNotAnExcessThirdRook(double scale)
+    {
+        using var original = SKBitmap.Decode(Path.Combine(AppContext.BaseDirectory, "Fixtures", "pawn-rook-correction.png"));
+        using var scaled = original.Resize(new SKImageInfo((int)(original.Width * scale), (int)(original.Height * scale)),
+            new SKSamplingOptions(SKFilterMode.Linear));
+        using var encoded = scaled.Encode(SKEncodedImageFormat.Png, 100);
+        var pixels = CapturedPixels.DecodePng(encoded.ToArray());
+        var geometry = BoardLocator.Locate(encoded.ToArray())! with { RedAtTop = false };
+        await RecognitionAcceleration.PrepareAsync();
+        var prediction = await LocalBoardClassifier.ReadAsync(pixels, geometry, false, CancellationToken.None);
+        var model = prediction.ToRecognition(true, false);
+        var indices = model.Uncertain.Select(s => s.Rank * 9 + s.File).ToArray();
+        var ocr = await LocalGlyphOcr.ReadCellsAsync(pixels, geometry, indices, CancellationToken.None);
+        output.WriteLine($"model {model.Fen}: {string.Join(',', model.Uncertain.Select(s => s.Uci))}");
+        foreach (var i in indices) output.WriteLine($"{new Square(i % 9, i / 9).Uci}: {prediction.Pieces[i]} {prediction.Confidence[i]:F4}; {ocr.Glyphs[i]}");
+        var read = await new ExternalPositionRecognizer().ReadAsync(new(new(1, 2, "fixture", 0, 0, pixels.Width, pixels.Height), pixels),
+            geometry, true, CancellationToken.None, false, null, null);
+        Assert.NotNull(read);
+        Assert.Equal("9/4c1P2/3kb4/2C6/3P5/9/9/4BA3/4pnppc/2BKnrrpp w - - 0 1", read.Fen);
+        Assert.True(read.Confident, $"{read.Problem}; {string.Join(',', read.Uncertain.Select(s => s.Uci))}");
+        // Quotas alone may not pick which rook to remove. If another member
+        // of the competing group has weak OCR, the conflict must stay visible.
+        var weak = (LocalGlyphOcr.Glyph[])ocr.Glyphs.Clone();
+        weak[86] = weak[86] with { Confidence = .79 };
+        var unresolved = ExternalPositionRecognizer.Supplement(pixels, geometry, prediction, model, weak, true, false);
+        Assert.False(unresolved.Confident);
+        Assert.Equal(model.Fen, unresolved.Fen);
+        var game = new XiangqiGame(); game.LoadFen(read.Fen);
+        var frame = BoardObservation.Read(pixels, geometry);
+        var gate = ExternalInputVerification.Check(new(frame, game), game, frame, read);
+        Assert.True(gate.Recognized, gate.Message);
+        Assert.Empty(gate.Moves);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(.5)]
     public async Task ReportedBoardCanAuthorizeInputWithoutAManualMove(double scale)
     {
         using var original = SKBitmap.Decode(Path.Combine(AppContext.BaseDirectory, "Fixtures", "jj-verification-stall.png"));
