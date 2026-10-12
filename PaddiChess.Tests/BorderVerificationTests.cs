@@ -39,7 +39,7 @@ public class BorderVerificationTests(ITestOutputHelper output)
         refresh.Seed("history", null, source, read);
         var game = new XiangqiGame(); game.LoadFen(Expected);
         var tracker = new ExternalBoardTracker(source, game);
-        // The real screenshot has 64 empties; the former 60-sample cap omitted
+        // The real screenshot has 63 empties; the former 60-sample cap omitted
         // i0. Even a synthetic one-level lighting change then rejected that
         // square after the complete model read had correctly identified it.
         foreach (var brightness in new[] { 1, -1, 3 })
