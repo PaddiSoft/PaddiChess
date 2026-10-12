@@ -32,6 +32,25 @@ public static class LocalGlyphOcr
     private sealed record Prepared(float[] Input, List<int> Indices);
     private sealed record Cached(float[] Input, Glyph Glyph);
 
+    /// <summary>Bounded exact-input memo, accessed only while Gate is held.
+    /// Completed views survive a supplement deadline; cancelled inference never enters it.</summary>
+    internal sealed class InputCache
+    {
+        private readonly Dictionary<string, Cached> _entries = new();
+        internal int Count => _entries.Count;
+        internal bool TryGet(string key, float[] input, out Glyph glyph)
+        {
+            if (_entries.TryGetValue(key, out var cached) && input.AsSpan().SequenceEqual(cached.Input))
+            { glyph = cached.Glyph; return true; }
+            glyph = new("", 0); return false;
+        }
+        internal void Add(string key, float[] input, Glyph glyph)
+        {
+            if (!_entries.ContainsKey(key) && _entries.Count >= 256) _entries.Remove(_entries.Keys.First());
+            _entries[key] = new(input, glyph);
+        }
+    }
+
     public static Task<Glyph[]> ReadAsync(byte[] png, BoardCalibration geometry, CancellationToken ct)
         => ReadPngAsync(png, geometry, ct);
 
@@ -56,15 +75,20 @@ public static class LocalGlyphOcr
     /// <summary>Supplement only unresolved display squares; never rescan a confirmed board.</summary>
     public static async Task<ReadResult> ReadCellsAsync(CapturedPixels pixels, BoardCalibration geometry,
         IReadOnlyCollection<int> displayIndices, CancellationToken ct)
+        => await ReadCellsAsync(pixels, geometry, displayIndices, ct, null).ConfigureAwait(false);
+
+    internal static async Task<ReadResult> ReadCellsAsync(CapturedPixels pixels, BoardCalibration geometry,
+        IReadOnlyCollection<int> displayIndices, CancellationToken ct, InputCache? cache)
     {
         var requested = displayIndices.ToHashSet();
         if (requested.Any(i => i is < 0 or >= 90)) throw new ArgumentOutOfRangeException(nameof(displayIndices));
         await Gate.WaitAsync(ct).ConfigureAwait(false);
-        try { return await Task.Run(() => Read(pixels, geometry, ct, requested), ct).ConfigureAwait(false); }
+        try { return await Task.Run(() => Read(pixels, geometry, ct, requested, cache), ct).ConfigureAwait(false); }
         finally { Gate.Release(); }
     }
 
-    private static ReadResult Read(CapturedPixels pixels, BoardCalibration geometry, CancellationToken ct, HashSet<int>? requested = null)
+    private static ReadResult Read(CapturedPixels pixels, BoardCalibration geometry, CancellationToken ct,
+        HashSet<int>? requested = null, InputCache? cache = null)
     {
         var timer = Stopwatch.StartNew();
         ct.ThrowIfCancellationRequested();
@@ -77,9 +101,9 @@ public static class LocalGlyphOcr
         var results = Enumerable.Repeat(new Glyph("", 0), 90).ToArray();
         var plainGrid = Enumerable.Range(0,90).Select(i => IsPlainGrid(pixels,geometry,i)).ToArray();
         // Repeated soldiers and plain intersections often have exactly the same input.
-        // This is per-request, bounded and verified byte-for-byte after hashing: a
+        // The bounded cache verifies every input byte after hashing: a
         // different colour, stroke, highlight or animation still receives its own OCR.
-        var cache = new Dictionary<string, Cached>();
+        cache ??= new InputCache();
         int inferenceCells = 0, reusedCells = 0, batches = 0;
         var discRays = Enumerable.Range(0, 90).Select(i => PieceSilhouette.DiscRays(pixels, geometry, i)).ToArray();
         // Some OCR dictionaries omit rare Xiangqi variants such as 俥. For an
@@ -129,9 +153,9 @@ public static class LocalGlyphOcr
                         }
                         var glyph = Decode(tokens);
                         foreach (var index in batch[i].Value.Indices) Accept(index, glyph);
-                        // Retaining 256 inputs bounds this per-request cache to
+                        // Retaining 256 inputs bounds this cache to
                         // 22.5 MiB of float data even when extra views are needed.
-                        if (cache.Count < 256) cache[batch[i].Key] = new(batch[i].Value.Input, glyph);
+                        cache.Add(batch[i].Key, batch[i].Value.Input, glyph);
                     }
                     inferenceCells += batch.Length; batches++;
                     return 0;
@@ -144,8 +168,8 @@ public static class LocalGlyphOcr
                 var input = new float[3 * 48 * 160];
                 Fill(input, image, geometry, index, variant);
                 var key = Convert.ToHexString(SHA256.HashData(MemoryMarshal.AsBytes(input.AsSpan())));
-                if (cache.TryGetValue(key, out var cached) && input.AsSpan().SequenceEqual(cached.Input))
-                { Accept(index, cached.Glyph); reusedCells++; }
+                if (cache.TryGet(key, input, out var cached))
+                { Accept(index, cached); reusedCells++; }
                 else if (pending.TryGetValue(key, out var prepared) && input.AsSpan().SequenceEqual(prepared.Input))
                 { prepared.Indices.Add(index); reusedCells++; }
                 else

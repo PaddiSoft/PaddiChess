@@ -34,7 +34,7 @@ jobs:
         run: |
           dotnet restore PaddiChess.Tests/PaddiChess.Tests.csproj -p:RuntimeIdentifier=win-x64 --locked-mode
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          dotnet test PaddiChess.Tests/PaddiChess.Tests.csproj -c Release -r win-x64 --no-restore --filter "FullyQualifiedName~InferenceRuntimeTests|FullyQualifiedName~InferenceModelTests|FullyQualifiedName~BoardClassifierTests|FullyQualifiedName~VerificationStallTests|FullyQualifiedName~MarkerRecognitionTests|FullyQualifiedName~BorderVerificationTests" --logger "trx;LogFileName=windows-recognition.trx" --results-directory artifacts/verification/windows
+          dotnet test PaddiChess.Tests/PaddiChess.Tests.csproj -c Release -r win-x64 --no-restore --filter "FullyQualifiedName~InferenceRuntimeTests|FullyQualifiedName~InferenceModelTests|FullyQualifiedName~BoardClassifierTests|FullyQualifiedName~VerificationStallTests|FullyQualifiedName~MarkerRecognitionTests|FullyQualifiedName~BorderVerificationTests|FullyQualifiedName~OcrResumeTests" --logger "trx;LogFileName=windows-recognition.trx" --results-directory artifacts/verification/windows
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Verify takeover and owned Windows input
         shell: pwsh
@@ -80,7 +80,7 @@ jobs:
           PADDI_RECOGNITION_DEVICE: auto
         run: >-
           dotnet test PaddiChess.Tests/PaddiChess.Tests.csproj -c Release --no-build --no-restore
-          --filter 'FullyQualifiedName~InferenceRuntimeTests|FullyQualifiedName~InferenceModelTests|FullyQualifiedName~BoardClassifierTests|FullyQualifiedName~VerificationStallTests|FullyQualifiedName~MarkerRecognitionTests|FullyQualifiedName~BorderVerificationTests'
+          --filter 'FullyQualifiedName~InferenceRuntimeTests|FullyQualifiedName~InferenceModelTests|FullyQualifiedName~BoardClassifierTests|FullyQualifiedName~VerificationStallTests|FullyQualifiedName~MarkerRecognitionTests|FullyQualifiedName~BorderVerificationTests|FullyQualifiedName~OcrResumeTests'
           --logger 'trx;LogFileName=macos-auto-recognition.trx'
           --results-directory artifacts/verification/macos-auto
       - name: Upload regression evidence

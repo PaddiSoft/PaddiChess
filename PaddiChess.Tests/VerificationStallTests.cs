@@ -29,8 +29,17 @@ public class VerificationStallTests(ITestOutputHelper output)
         var ocr = await LocalGlyphOcr.ReadCellsAsync(pixels, geometry, indices, CancellationToken.None);
         output.WriteLine($"model {model.Fen}: {string.Join(',', model.Uncertain.Select(s => s.Uci))}");
         foreach (var i in indices) output.WriteLine($"{new Square(i % 9, i / 9).Uci}: {prediction.Pieces[i]} {prediction.Confidence[i]:F4}; {ocr.Glyphs[i]}");
-        var read = await new ExternalPositionRecognizer().ReadAsync(new(new(1, 2, "fixture", 0, 0, pixels.Width, pixels.Height), pixels),
-            geometry, true, CancellationToken.None, false, null, null);
+        var reader = new ExternalPositionRecognizer();
+        var screenshot = new ExternalFrame(new(1, 2, "fixture", 0, 0, pixels.Width, pixels.Height), pixels);
+        SkinRecognition? read = null;
+        // Slow accelerator partitions may exceed a single 800 ms supplement
+        // budget. Repeated reads must make progress instead of restarting OCR.
+        for (var attempt = 0; attempt < 8; attempt++)
+        {
+            read = await reader.ReadAsync(screenshot, geometry, true, CancellationToken.None, false, null, null);
+            output.WriteLine($"supplement attempt {attempt + 1}: {read?.Confident}");
+            if (read?.Confident == true) break;
+        }
         Assert.NotNull(read);
         Assert.Equal("9/4c1P2/3kb4/2C6/3P5/9/9/4BA3/4pnppc/2BKnrrpp w - - 0 1", read.Fen);
         Assert.True(read.Confident, $"{read.Problem}; {string.Join(',', read.Uncertain.Select(s => s.Uci))}");

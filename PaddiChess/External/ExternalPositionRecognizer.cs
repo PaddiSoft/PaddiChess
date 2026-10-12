@@ -12,6 +12,7 @@ public interface IExternalPositionRecognizer
 /// <summary>Initial/full-board recognition, separate from the lightweight move tracker.</summary>
 public sealed class ExternalPositionRecognizer : IExternalPositionRecognizer
 {
+    private readonly LocalGlyphOcr.InputCache _ocrCache = new();
     public async Task<SkinRecognition?> ReadAsync(ExternalFrame frame, BoardCalibration geometry,
         bool redToMove, CancellationToken ct, bool detectOrientation, BoardSkin? sessionSkin, string? customPath)
     {
@@ -32,7 +33,7 @@ public sealed class ExternalPositionRecognizer : IExternalPositionRecognizer
         try
         {
             var indices = read.Uncertain.Select(s => prediction.RedAtTop ? 89 - s.Rank * 9 - s.File : s.Rank * 9 + s.File).ToArray();
-            var ocr = await LocalGlyphOcr.ReadCellsAsync(pixels, selectedGeometry, indices, supplement.Token).ConfigureAwait(false);
+            var ocr = await LocalGlyphOcr.ReadCellsAsync(pixels, selectedGeometry, indices, supplement.Token, _ocrCache).ConfigureAwait(false);
             return await Task.Run(() => Supplement(pixels, selectedGeometry, prediction, read, ocr.Glyphs,
                 redToMove, detectOrientation), ct).ConfigureAwait(false);
         }
