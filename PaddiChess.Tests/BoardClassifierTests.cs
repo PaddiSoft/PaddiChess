@@ -28,11 +28,24 @@ public class BoardClassifierTests
         var frame = new ExternalFrame(new(1, 2, "regression", 0, 0, pixels.Width, pixels.Height), pixels);
         var grid = new BoardCalibration(sample.Grid[0], sample.Grid[1], sample.Grid[2], sample.Grid[3], sample.Flipped);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        var read = await new ExternalPositionRecognizer().ReadAsync(frame, grid, true, timeout.Token, false, null, null);
-        Assert.NotNull(read); Assert.False(frame.PngEncoded);
-        var truth = Expand(sample.Fen); var actual = Expand(read.Fen);
-        for (var i = 0; i < 90; i++)
-            if (!read.Uncertain.Contains(new Square(i % 9, i / 9))) Assert.Equal(truth[i], actual[i]);
+        var reader = new ExternalPositionRecognizer();
+        var truth = Expand(sample.Fen);
+        SkinRecognition? read = null;
+        // Production bounds each OCR supplement to 800 ms and resumes completed
+        // views on its next read. Exercise that contract under slow accelerators,
+        // checking EVERY intermediate result for incorrectly accepted identities.
+        for (var attempt = 0; attempt < 8; attempt++)
+        {
+            read = await reader.ReadAsync(frame, grid, true, timeout.Token, false, null, null);
+            Assert.NotNull(read); Assert.False(frame.PngEncoded);
+            var partial = Expand(read.Fen);
+            for (var i = 0; i < 90; i++)
+                if (!read.Uncertain.Contains(new Square(i % 9, i / 9))) Assert.Equal(truth[i], partial[i]);
+            if (read.Confident) Assert.Equal(truth, partial);
+            if (read.Confident || sample.Group != "reported") break;
+        }
+        Assert.NotNull(read);
+        var actual = Expand(read.Fen);
         if (sample.Group == "reported")
         {
             Assert.Equal(truth, actual);
