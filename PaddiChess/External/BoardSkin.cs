@@ -25,7 +25,11 @@ public sealed record BoardSkin(string Name, Dictionary<char, List<float[]>> Samp
         {
             var piece = game.Board[i / 9, i % 9];
             if (!samples.TryGetValue(piece, out var list)) samples[piece] = list = [];
-            if (list.Count < (piece == '\0' ? 60 : 5)) list.Add(image.Cells[i]);
+            // A late position can have up to 88 empty intersections. Keep every
+            // independently labelled sample, including the last ranks/corners:
+            // their borders and palace lines need not resemble earlier empties.
+            // The board already bounds the entire vocabulary to 90 samples.
+            list.Add(image.Cells[i]);
         }
         if (requireAllPieces && "rnbakcpRNBAKCP".Any(p => !samples.ContainsKey(p)))
             throw new InvalidOperationException("学习样式需要红黑双方的全部七种棋子。请使用完整开局学习，之后就能识别同款棋盘的中局。");
@@ -264,7 +268,7 @@ public sealed record BoardSkin(string Name, Dictionary<char, List<float[]>> Samp
         catch (JsonException ex) { throw new FormatException("棋子样式文件损坏，请重新学习", ex); }
         if (string.IsNullOrWhiteSpace(skin.Name) || skin.Samples == null || skin.Samples.Count != 15 ||
             "rnbakcpRNBAKCP\0".Any(c => !skin.Samples.ContainsKey(c)) ||
-            skin.Samples.Values.Any(v => v == null || v.Count is < 1 or > 60 ||
+            skin.Samples.Values.Any(v => v == null || v.Count is < 1 or > 90 ||
                 v.Any(s => s == null || s.Length != 1728 || s.Any(n => !float.IsFinite(n) || n < 0 || n > 1))))
             throw new FormatException("棋子样式文件损坏，请重新学习");
         return skin;
