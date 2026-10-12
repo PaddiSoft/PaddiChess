@@ -8,6 +8,50 @@ namespace PaddiXiangqi.Tests;
 
 public partial class ExternalSessionTests
 {
+    [Theory]
+    [InlineData(false, 0)]
+    [InlineData(false, 1)]
+    [InlineData(false, 2)]
+    [InlineData(true, 1)]
+    public async Task ReviewedCorrectionStillSendsMateAfterEighteenObservedPlies(bool flipped, int delivery)
+    {
+        const string fen = "9/4c1P2/3kb4/2C6/3P5/9/9/4BA3/4pnppc/2BKnrrpp w - - 0 1";
+        await WithPreflightAsync(flipped, true, async fixture =>
+        {
+            var window = fixture.Window;
+            window.FindControl<CheckBox>("ExternalAutoTurnCheck")!.IsChecked = false;
+            window.FindControl<ComboBox>("ExternalTurnBox")!.SelectedIndex = 0;
+            window.FindControl<ComboBox>("ExternalDeliveryBox")!.SelectedIndex = delivery;
+            var editing = (Task)typeof(MainWindow).GetMethod("ShowExternalPositionEditorAsync", Private)!
+                .Invoke(window, [fen.Replace("rrpp", "rrpr"), "模拟模型误读", new[] { new Square(8, 9) }, false])!;
+            var editor = window.OwnedWindows.OfType<ExternalPositionEditorWindow>().Single();
+            editor.Editor.SelectPiece('p'); editor.Editor.Click(new(8, 9));
+            editor.FindControl<Button>("ExternalEditorAccept")!
+                .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            await editing.WaitAsync(TimeSpan.FromSeconds(3));
+            Set(window, "_positionRecognizer", new WrongPawnPositionRecognizer());
+            fixture.Model!.PreferredMove = "g8f8";
+            fixture.Desktop.TransformFrame = frame => ManualPositionEvidenceTests.Tint(frame, 3);
+            typeof(MainWindow).GetMethod("BeginExternalObservation", Private)!.Invoke(window, [false]);
+            string[] moves = ["d5d6", "d7d8", "d6d7", "d8d9", "d7d8", "d9e9", "d8e8", "e9e8",
+                "c6e6", "e7c9", "e6e1", "c9e7", "e2g4", "e7c9", "c0e2", "c9e7", "g4i2", "e8e9"];
+            for (var i = 0; i < moves.Length; i++)
+            {
+                fixture.Desktop.Advance(moves[i]);
+                await WaitPreflightAsync(() => Get<XiangqiGame>(window, "_game").Ply == i + 1, window);
+            }
+            Assert.Equal(moves, Get<XiangqiGame>(window, "_game").History.Select(move => move.Uci));
+            await WaitPreflightAsync(() => Get<object?>(window, "_externalPreparedDecision") != null, window);
+            Assert.Equal("g8f8", PreparedMove(Get<object>(window, "_externalPreparedDecision")));
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            Click(window, "ExternalStartButton");
+            await fixture.Desktop.FirstInput.Task.WaitAsync(TimeSpan.FromSeconds(1.5));
+            _latencyOutput.WriteLine($"18 plies / flipped={flipped} / delivery={delivery}: {clock.Elapsed.TotalMilliseconds:F1} ms to mate input");
+            Assert.Equal("g8f8", fixture.Desktop.LastInput);
+            Assert.Equal(1, fixture.Desktop.InputCount);
+        }, initialFen: fen);
+    }
+
     [Fact]
     public async Task AdoptedEditorCorrectionSurvivesRepeatedModelErrorAndAllowsInput()
     {

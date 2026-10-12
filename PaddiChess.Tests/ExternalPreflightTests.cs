@@ -365,6 +365,7 @@ public partial class ExternalSessionTests
         public ExternalWindow Target { get; set; } = new(786, 786, "preflight fixture", 0, 0, 480, 530);
         public int BackingScale { get; set; } = 1;
         public Func<int, CancellationToken, Task>? BeforeCaptureAsync { get; set; }
+        public Func<ExternalFrame, ExternalFrame>? TransformFrame { get; set; }
         public List<(int PixelWidth, int PixelHeight, ExternalWindow Window)> CaptureSizes { get; } = [];
         public List<PreflightInput> Inputs { get; } = [];
         public XiangqiGame Game { get; } = new();
@@ -426,7 +427,8 @@ public partial class ExternalSessionTests
             else if (PulseEveryCapture)
                 png = PulsePiece(png, PulseSquare, flipped, Captures % 2 == 0 ? 7 : 18);
             CaptureSizes.Add((480 * BackingScale, 530 * BackingScale, Target));
-            return new ExternalFrame(Target, png);
+            var frame = new ExternalFrame(Target, png);
+            return TransformFrame?.Invoke(frame) ?? frame;
         }
         public void LoadFen(string fen)
         {
@@ -475,6 +477,7 @@ public partial class ExternalSessionTests
         private int _count;
         public int Count => Volatile.Read(ref _count);
         public bool BlockFirst { get; set; }
+        public string? PreferredMove { get; set; }
         public TaskCompletionSource ReleaseFirst { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public ConcurrentQueue<PreflightModelRequest> Requests { get; } = new();
         public TaskCompletionSource FirstRequest { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -485,8 +488,10 @@ public partial class ExternalSessionTests
             Assert.Equal("/v1/chat/completions", request.RequestUri.AbsolutePath);
             using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(ct));
             var root = body.RootElement;
-            var move = root.GetProperty("tools")[0].GetProperty("function").GetProperty("parameters")
-                .GetProperty("properties").GetProperty("move").GetProperty("enum")[0].GetString()!;
+            var choices = root.GetProperty("tools")[0].GetProperty("function").GetProperty("parameters")
+                .GetProperty("properties").GetProperty("move").GetProperty("enum").EnumerateArray()
+                .Select(value => value.GetString()!).ToArray();
+            var move = PreferredMove is { } preferred && choices.Contains(preferred) ? preferred : choices[0];
             var model = root.GetProperty("model").GetString()!;
             var effort = root.TryGetProperty("reasoning_effort", out var reasoning) ? reasoning.GetString() : null;
             Requests.Enqueue(new(model, effort, move));
