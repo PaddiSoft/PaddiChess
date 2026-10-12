@@ -242,6 +242,10 @@ public partial class ExternalSessionTests
                 desktop.HideMoves=fault=="delayed_ack";
                 if(fault=="capture_failure")desktop.CaptureFailures=4;
                 Click(window,"ExternalStartButton");
+                // Measure the outage after the session has established its
+                // reference/history, not from a click racing CI initialization.
+                Assert.True(await Get<TaskCompletionSource<bool>>(window,"_externalObservationReady")
+                    .Task.WaitAsync(TimeSpan.FromSeconds(10)));
                 await Task.Delay(waitMs);
                 Assert.True(Get<bool>(window,"_externalRunning"),window.FindControl<TextBlock>("ExternalStatusText")!.Text);
                 Assert.True(Get<bool>(window,"_externalLinked"));
