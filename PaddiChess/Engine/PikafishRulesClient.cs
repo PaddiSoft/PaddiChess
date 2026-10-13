@@ -8,8 +8,9 @@ public sealed record NativeRuleMoves(string Version, string Fen, IReadOnlyList<s
     IReadOnlyList<string> Excluded);
 
 /// <summary>Persistent, NNUE-free adapter to the bundled Pikafish rule implementation.</summary>
-public sealed class PikafishRulesClient : IAsyncDisposable
+public sealed class PikafishRulesClient : IAsyncDisposable, IRuleMoveProvider
 {
+    public RuleCapabilities Capabilities { get; } = new("内置规则组件 Pikafish-2026-09-06（固定规则）", false, true, []);
     private readonly SemaphoreSlim _gate = new(1, 1);
     private Process? _process;
     private string? _cachedKey;

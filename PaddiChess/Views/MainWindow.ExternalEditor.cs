@@ -11,7 +11,7 @@ namespace PaddiXiangqi.Views;
 
 public partial class MainWindow
 {
-    private IExternalPositionRecognizer _positionRecognizer = new ExternalPositionRecognizer();
+    private IExternalPositionRecognizer _positionRecognizer = RecognitionHost.Create();
     private ExternalManualPosition? _externalManualPosition;
     private Task<SkinRecognition?> ReadExternalSkinAsync(ExternalFrame frame, BoardCalibration geometry,
         bool redToMove, CancellationToken ct, bool detectOrientation = false)

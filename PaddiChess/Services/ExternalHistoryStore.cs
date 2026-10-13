@@ -23,7 +23,7 @@ public sealed record ExternalHistoryEvent
     [JsonIgnore]
     public string Label => Kind switch
     {
-        "started" => "开始记录", "confirmed" => "确认落子", "decision" => "选择着法",
+        "performance" => "性能统计", "started" => "开始记录", "confirmed" => "确认落子", "decision" => "选择着法",
         "sent" => "发送落子", "input-completed" => "输入完成", "input-retry" => "补发终点", "verification" => "落子前核验", "correction" => "自动校正", "corrected" => "完成校正",
         "paused" => "暂停", "error" => "异常", "ended" => "结束记录",
         "observation" => "识别候选", "blocked" => "等待核验", "resumed" => "继续接管",
@@ -47,7 +47,8 @@ public sealed record ExternalHistoryItem(string RecordPath, string? EventsPath, 
 /// </summary>
 public sealed class ExternalHistoryStore : IAsyncDisposable
 {
-    private sealed record Write(ExternalHistoryEvent? Event, byte[]? Snapshot, TaskCompletionSource? Barrier);
+    private sealed record Write(ExternalHistoryEvent? Event, byte[]? Snapshot, TaskCompletionSource? Barrier, string? Title = null, int Plies = 0);
+    private sealed record HistorySummary(string Title, int Plies, long Bytes);
     private sealed class RecordSummary
     {
         public string? Format { get; set; }
@@ -75,7 +76,7 @@ public sealed class ExternalHistoryStore : IAsyncDisposable
         // branches must not mutate a snapshot that is waiting for disk I/O.
         var frozen = entry with { Candidates = entry.Candidates.ToArray() };
         var bytes = snapshot is null ? null : JsonSerializer.SerializeToUtf8Bytes(snapshot);
-        return _writes.Writer.WriteAsync(new Write(frozen, bytes, null), ct);
+        return _writes.Writer.WriteAsync(new Write(frozen, bytes, null, snapshot?.Title, snapshot?.Moves.Count ?? 0), ct);
     }
 
     public async Task FlushAsync()
@@ -99,6 +100,8 @@ public sealed class ExternalHistoryStore : IAsyncDisposable
         try
         {
             Directory.CreateDirectory(SessionDirectory);
+            using var lease = new FileStream(Path.Combine(SessionDirectory, ".active"), FileMode.Create, FileAccess.ReadWrite, FileShare.None);
+            await using var index = new FileStream(EventsPath + ".idx", FileMode.CreateNew, FileAccess.Write, FileShare.Read, 4096, true);
             await using var stream = new FileStream(EventsPath, FileMode.CreateNew, FileAccess.Write,
                 FileShare.Read, 16_384, FileOptions.Asynchronous);
             await using var log = new StreamWriter(stream, new UTF8Encoding(false));
@@ -108,6 +111,13 @@ public sealed class ExternalHistoryStore : IAsyncDisposable
                 current = write;
                 if (write.Event is { } entry)
                 {
+                    if (sequence % ExternalHistoryPaging.PageSize == 0)
+                    {
+                        var offset = new byte[8];
+                        System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(offset, stream.Position);
+                        await index.WriteAsync(offset).ConfigureAwait(false);
+                        await index.FlushAsync().ConfigureAwait(false);
+                    }
                     await log.WriteLineAsync(JsonSerializer.Serialize(entry with { Sequence = ++sequence })).ConfigureAwait(false);
                     await log.FlushAsync().ConfigureAwait(false);
                 }
@@ -119,6 +129,11 @@ public sealed class ExternalHistoryStore : IAsyncDisposable
                     // reader's snapshot while publishing the new file at this path.
                     if (File.Exists(RecordPath)) File.Replace(temporary, RecordPath, null);
                     else File.Move(temporary, RecordPath);
+                    var summaryPath = Path.Combine(SessionDirectory, "summary.json");
+                    await File.WriteAllTextAsync(summaryPath + ".tmp",
+                        JsonSerializer.Serialize(new HistorySummary(write.Title ?? "未命名棋谱", write.Plies, snapshot.Length))).ConfigureAwait(false);
+                    if (File.Exists(summaryPath)) File.Replace(summaryPath + ".tmp", summaryPath, null);
+                    else File.Move(summaryPath + ".tmp", summaryPath);
                 }
                 write.Barrier?.TrySetResult();
                 current = null;
@@ -139,8 +154,9 @@ public sealed class ExternalHistoryStore : IAsyncDisposable
     }
 
     public static Task<IReadOnlyList<ExternalHistoryItem>> ListAsync(string root, string? recovery = null,
-        CancellationToken ct = default) => Task.Run(async () =>
+        CancellationToken ct = default, int page = 0) => Task.Run(async () =>
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(page);
         var paths = Directory.Exists(root)
             ? Directory.EnumerateDirectories(root).Select(folder => Path.Combine(folder, "game.paddi.json"))
             : Enumerable.Empty<string>();
@@ -148,13 +164,29 @@ public sealed class ExternalHistoryStore : IAsyncDisposable
             paths = paths.Concat(Directory.EnumerateFiles(recovery, "*.paddi.json"));
         var result = new List<ExternalHistoryItem>();
         var candidates = paths.Select(path => { ct.ThrowIfCancellationRequested(); return new FileInfo(path); })
-            .Where(file => file.Exists).OrderByDescending(file => file.LastWriteTime).Take(500);
+            .Where(file => file.Exists).OrderByDescending(file => file.LastWriteTime).Skip(checked(page * 500)).Take(500);
         foreach (var file in candidates)
         {
             ct.ThrowIfCancellationRequested();
             var path = file.FullName;
             try
             {
+                var summaryPath = Path.Combine(Path.GetDirectoryName(path)!, "summary.json");
+                if (File.Exists(summaryPath))
+                {
+                    try
+                    {
+                        await using var summaryStream = OpenRecordRead(summaryPath);
+                        var summary = await JsonSerializer.DeserializeAsync<HistorySummary>(summaryStream, cancellationToken: ct);
+                        if (summary != null && summary.Bytes == file.Length && File.GetLastWriteTimeUtc(summaryPath) >= file.LastWriteTimeUtc)
+                        {
+                            var logPath = Path.Combine(Path.GetDirectoryName(path)!, "history.jsonl");
+                            result.Add(new(path, logPath, summary.Title, file.LastWriteTime, summary.Plies, false));
+                            continue;
+                        }
+                    }
+                    catch (Exception error) when (error is JsonException or IOException or UnauthorizedAccessException) { }
+                }
                 await using var stream = OpenRecordRead(path);
                 // Listing does not need to materialize potentially long model responses.
                 var record = await JsonSerializer.DeserializeAsync<RecordSummary>(stream, cancellationToken: ct).ConfigureAwait(false);

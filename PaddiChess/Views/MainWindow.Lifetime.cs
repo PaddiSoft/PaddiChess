@@ -58,6 +58,7 @@ public partial class MainWindow
         {
             try
             {
+                if (_positionRecognizer is IAsyncDisposable recognitionWorker) await recognitionWorker.DisposeAsync();
                 await Task.WhenAll(_engine.DisposeAsync().AsTask(), _modelRules.DisposeAsync().AsTask(),
                     _externalPlayingEngine?.DisposeAsync().AsTask() ?? Task.CompletedTask);
             }

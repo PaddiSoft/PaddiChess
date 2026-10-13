@@ -11,6 +11,16 @@ public static class RecognitionAcceleration
     internal static readonly SemaphoreSlim PreparationGate = new(1, 1);
     public static IReadOnlyList<RecognitionDeviceStatus> Status => States.Values.OrderBy(s => s.Model).ToArray();
     internal static void Report(RecognitionDeviceStatus status) => States[status.Model] = status;
+    internal static void Clear(string model) => States.TryRemove(model, out _);
+
+    // Open starts accelerator preparation without waiting for it. The worker
+    // handshake only waits for CPU sessions, keeping cold GPU compilation
+    // out of the pipe and first connected-board read.
+    internal static Task EnsureReadyAsync() => Task.Run(() =>
+    {
+        LocalBoardClassifier.EnsureReady();
+        LocalGlyphOcr.EnsureReady();
+    });
 
     // Start at the first visit to external takeover. Compilation remains off the UI
     // thread and a ready CPU session serves recognition until the accelerator is warm.

@@ -12,7 +12,7 @@ namespace PaddiXiangqi.Tests;
 [Collection("Desktop integration")]
 public partial class ExternalSessionTests
 {
-    internal static readonly HeadlessUnitTestSession Session = HeadlessUnitTestSession.StartNew(typeof(ExternalTestApplication));
+    internal static readonly AwaitedUiSession Session = new(typeof(ExternalTestApplication));
     private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
     private static void Set(object target, string name, object value) => typeof(MainWindow).GetField(name, Private)!.SetValue(target,value);
     private static T Get<T>(object target, string name) => (T)typeof(MainWindow).GetField(name,Private)!.GetValue(target)!;

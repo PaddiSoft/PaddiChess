@@ -44,4 +44,7 @@ public sealed record UciEngineOption(string Name, string Type, string DefaultVal
         return new(match.Groups[1].Value, match.Groups[2].Value, value, Number("min"), Number("max"), variants);
     }
 }
-public sealed record EngineIdentity(string Name, string Author, string? EvalFile, IReadOnlyList<UciEngineOption> Options);
+public sealed record EngineIdentity(string Name, string Author, string? EvalFile, IReadOnlyList<UciEngineOption> Options)
+{
+    public RuleCapabilities Rules => RuleCapabilities.FromUci(Name, Options);
+}

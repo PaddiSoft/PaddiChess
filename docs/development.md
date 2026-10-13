@@ -44,12 +44,12 @@ bash scripts/verify.sh
 脚本依次执行：
 
 1. 检查 `dotnet`、Python、Clang，以及宿主所需工具。
-2. 检查引擎、NNUE、OCR 和关键测试图大小；核验象棋识别与 OCR 模型哈希，拒绝缺失文件与占位文本。
+2. 检查引擎、NNUE、OCR 和关键测试图；核验四个发布 RID 的许可清单覆盖和 72 项资源／notice 哈希，拒绝缺失文件与占位文本。
 3. `dotnet restore PaddiChess.slnx --locked-mode`。
 4. Release 构建，使用 `-warnaserror`。
 5. 在该构建结果上运行完整测试项目，保存 TRX。
 
-输出位于 `artifacts/verification/<运行标识>/`，包括 SDK 信息、还原／构建／测试日志和 `verification.trx`。布局图位于 `artifacts/ui/`。该入口不发送真实鼠标输入、不为真实游戏发起对局，也不创建发行包、不使用开发者证书签名或公证；macOS 原生组件构建会执行本地 ad hoc 签名。
+输出位于 `artifacts/verification/<运行标识>/`，包括 SDK 信息、还原／构建／测试日志和 `verification.trx`。布局图位于 `artifacts/ui/`。默认不发送真实鼠标输入；CI 设置 `PADDI_TEST_NATIVE_INPUT=1` 时仅操控测试自建窗口，不为真实游戏发起对局，也不创建发行包、不使用开发者证书签名或公证；macOS 原生组件构建会执行本地 ad hoc 签名。
 
 通过数量、跳过数量和运行平台应一起记录。Windows 专用测试在非 Windows 上跳过属于范围说明；跨编译不等于实机通过。当前分支的最新结果以完整验证日志和对应 Release 为准，文档不固定一个会随新增测试失效的总数。
 
@@ -115,7 +115,7 @@ dotnet build 'PaddiChess/PaddiChess.csproj' -c Release --no-restore
 dotnet test 'PaddiChess.Tests/PaddiChess.Tests.csproj' -c Release
 ```
 
-此入口已完成代码审查；Windows 二进制经过 macOS 交叉构建，PowerShell 构建流程仍需要 Windows 本机验收。
+Windows CI 使用此 PowerShell 入口构建并运行完整回归和自有 Win32 窗口测试；具体提交结果见 Actions。
 
 ## 打包
 
@@ -144,7 +144,22 @@ Windows ZIP 需要保持 UTF-8 文件名及完整目录。发布前应核对可�
 | 原生窗口实验 | 该系统与测试窗口的真实输入／捕获 | 第三方客户端接受后台输入 |
 | 跨编译与包校验 | 产物架构、资源、归档一致性 | 目标系统实际运行与对局 |
 
-新增平台 CI 前，应补齐该平台原生依赖与实际运行测试，避免把跳过关键路径的绿灯当作支持证明。
+Linux CI 在 Xvfb 的 24 位 X11 显示服务运行完整回归，使用真实 X11 自建窗口验证合成捕获和点击事件。Debian／Ubuntu 所需包示例：
+
+```bash
+sudo apt-get install clang lld xvfb libx11-6 libxcomposite1 libxtst6 libfontconfig1
+PADDI_RECOGNITION_DEVICE=cpu PADDI_TEST_NATIVE_INPUT=1 XDG_SESSION_TYPE=x11 \
+  xvfb-run -a -s '-screen 0 1280x1024x24 +extension COMPOSITE' bash scripts/verify.sh
+```
+
+[`dependency-audit.yml`](../.github/workflows/dependency-audit.yml) 对四个发布 RID 分别锁定还原并查询已知漏洞；查询源不可用也会失败，不能当成“无漏洞”。另外检查依赖版本是否都有随包许可、资源与声明哈希是否一致。哈希完整性不等于独立核实第三方提供的二进制源码对应关系。
+
+```bash
+python3 scripts/verify-dependency-inventory.py
+python3 scripts/check-vulnerabilities.py --output artifacts/dependency-audit.json
+```
+
+UI 调度测试使用 `AwaitedUiSession` 显式等待 `Func<Task>`。Avalonia Headless 的泛型返回值重载会把未显式解包的 Task 当成普通结果，测试可能在异步断言执行前结束；新增回归不得绕开这个封装。
 
 ## 发布前检查
 

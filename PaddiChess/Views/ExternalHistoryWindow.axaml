@@ -2,19 +2,28 @@
         xmlns:local="using:PaddiXiangqi"
         x:Class="PaddiXiangqi.Views.ExternalHistoryWindow" Title="接管记录" Width="1100" Height="720"
         MinWidth="1000" MinHeight="640" WindowStartupLocation="CenterOwner" RequestedThemeVariant="Light" Background="#F5F7FB">
-  <Grid Margin="18" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+  <Grid Margin="18" RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="10">
     <TextBlock Text="接管记录" Classes="heading"/>
     <TextBlock x:Name="HistoryHint" Grid.Row="1" Text="每次连接自动保存到本机；断开、重新同步后仍可查看。选择事件可核对程序当时采用的局面与着法。"
                TextWrapping="Wrap" Foreground="#536277" FontSize="12"/>
     <Grid Grid.Row="2" ColumnDefinitions="210,*,420" ColumnSpacing="12">
       <Grid RowDefinitions="Auto,*" RowSpacing="6">
-        <TextBlock Text="接管会话" FontWeight="SemiBold" Foreground="#35465F"/>
+        <StackPanel Orientation="Horizontal" Spacing="4">
+          <Button x:Name="PreviousSessions" Content="‹" Tag="-1" Click="SessionPage_Click" Padding="7,3" IsEnabled="False"/>
+          <TextBlock x:Name="SessionPageText" Text="接管会话" VerticalAlignment="Center"/>
+          <Button x:Name="NextSessions" Content="›" Tag="1" Click="SessionPage_Click" Padding="7,3" IsEnabled="False"/>
+        </StackPanel>
         <ListBox x:Name="SessionsList" Grid.Row="1" SelectionChanged="Session_Changed" Background="White" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
           <ListBox.ItemTemplate><DataTemplate x:CompileBindings="False"><TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12"/></DataTemplate></ListBox.ItemTemplate>
         </ListBox>
       </Grid>
       <Grid Grid.Column="1" RowDefinitions="Auto,*,1.15*" RowSpacing="6">
-        <TextBlock Text="识别与落子事件" FontWeight="SemiBold" Foreground="#35465F"/>
+        <StackPanel Orientation="Horizontal" Spacing="4">
+          <Button x:Name="PreviousEvents" Content="‹" ToolTip.Tip="上一页事件" Tag="-1" Click="EventPage_Click" Padding="7,3" FontSize="11" IsEnabled="False"/>
+          <TextBlock x:Name="EventPageText" Text="识别事件" VerticalAlignment="Center" FontSize="11"/>
+          <Button x:Name="NextEvents" Content="›" ToolTip.Tip="下一页事件" Tag="1" Click="EventPage_Click" Padding="7,3" FontSize="11" IsEnabled="False"/>
+          <Button Content="最新" Tag="last" Click="EventPage_Click" Padding="7,3" FontSize="11"/>
+        </StackPanel>
         <ListBox x:Name="EventsList" Grid.Row="1" SelectionChanged="Event_Changed" Background="White" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
           <ListBox.ItemTemplate><DataTemplate x:CompileBindings="False"><TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12"/></DataTemplate></ListBox.ItemTemplate>
         </ListBox>
@@ -42,7 +51,15 @@
         </Grid>
       </Border>
     </Grid>
-    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+    <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8">
+      <TextBlock Text="历史清理" VerticalAlignment="Center" FontSize="12"/>
+      <ComboBox x:Name="RetentionChoice" SelectedIndex="0" SelectionChanged="Retention_Changed" FontSize="12" MinWidth="155">
+        <ComboBoxItem Content="保留全部"/><ComboBoxItem Content="7 天以前"/><ComboBoxItem Content="30 天以前"/><ComboBoxItem Content="90 天以前"/>
+      </ComboBox>
+      <Button Content="检查占用" Click="PlanCleanup_Click" Padding="8,5" FontSize="12"/>
+      <Button x:Name="ConfirmCleanup" Content="确认清理" Click="ConfirmCleanup_Click" IsEnabled="False" Padding="8,5" FontSize="12"/>
+    </StackPanel>
+    <Grid Grid.Row="4" ColumnDefinitions="*,Auto" ColumnSpacing="10">
       <TextBlock x:Name="HistoryStatus" FontSize="11" Foreground="#536277" TextWrapping="Wrap" VerticalAlignment="Center"/>
       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
         <Button Content="刷新" Click="Refresh_Click"/>

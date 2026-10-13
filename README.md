@@ -37,7 +37,7 @@
 | macOS Apple Silicon | `PaddiChess-macOS-AppleSilicon.zip` → `Paddi象棋.app` | 本地对弈、分析、外部接管 |
 | Windows x64 | `PaddiChess-Windows-x64.zip` → `Paddi象棋.exe` | 本地对弈、分析；外部输入和捕获兼容性需在目标机器验证 |
 | macOS Intel | 仓库提供 `osx-x64` 构建目标 | 成品包以该次 Release 附件为准 |
-| Linux x64 | 仓库提供 `linux-x64` 构建目标 | 本地对弈客户端；尚未实现外部窗口接管 |
+| Linux x64 | 仓库提供 `linux-x64` 构建目标 | 本地对弈及 X11 外部接管；Wayland 暂不支持 |
 
 保留包内 `Engine`、`Native`、`Assets` 和运行时文件。macOS 外部接管需要屏幕录制与辅助功能权限；安装、权限及签名说明见[安装指南](docs/installation.md)。
 

@@ -101,10 +101,11 @@ public interface IExternalDesktop
 
 public static class ExternalDesktop
 {
-    public static bool Supported => OperatingSystem.IsMacOS() || OperatingSystem.IsWindows();
+    public static bool Supported => OperatingSystem.IsMacOS() || OperatingSystem.IsWindows() || X11ExternalDesktop.Available;
     public static IExternalDesktop Create() => OperatingSystem.IsMacOS() ? new MacExternalDesktop()
         : OperatingSystem.IsWindows() ? new WindowsExternalDesktop()
-        : throw new PlatformNotSupportedException("外部窗口接管目前支持 macOS 和 Windows；Linux 版暂未接入屏幕捕获与输入授权。 ");
+        : X11ExternalDesktop.Available ? new X11ExternalDesktop()
+        : throw new PlatformNotSupportedException("Linux 接管需使用 X11 会话并安装 libX11、libXcomposite、libXtst；原生 Wayland 当前不支持。");
 }
 
 internal sealed class MacExternalDesktop : IExternalDesktop
@@ -217,7 +218,7 @@ internal sealed class MacExternalDesktop : IExternalDesktop
                 start.ArgumentList.Add("capture-server-raw");
                 _capture = Process.Start(start) ?? throw new InvalidOperationException("无法启动截图服务");
                 _captureOutput = new BufferedStream(_capture.StandardOutput.BaseStream, 65536);
-                _ = _capture.StandardError.ReadToEndAsync();
+                _ = _capture.StandardError.BaseStream.CopyToAsync(Stream.Null);
             }
             await _capture.StandardInput.WriteLineAsync(window.Id.ToString().AsMemory(), timeout.Token);
             await _capture.StandardInput.FlushAsync(timeout.Token);

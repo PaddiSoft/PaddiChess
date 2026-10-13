@@ -93,3 +93,27 @@ jobs:
             artifacts/ui/*.png
           if-no-files-found: warn
           retention-days: 14
+
+  linux-regression:
+    name: Linux X11 · capture, input and regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PADDI_RECOGNITION_DEVICE: cpu
+      PADDI_TEST_NATIVE_INPUT: '1'
+      XDG_SESSION_TYPE: x11
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install native build and X11 test dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang lld xvfb libx11-6 libxcomposite1 libxtst6 libfontconfig1
+      - name: Verify complete solution and owned X11 window
+        run: xvfb-run -a -s '-screen 0 1280x1024x24 +extension COMPOSITE' bash scripts/verify.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-regression-evidence
+          path: artifacts/verification/**
+          retention-days: 14

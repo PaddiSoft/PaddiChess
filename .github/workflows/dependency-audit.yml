@@ -1,0 +1,35 @@
+name: Dependency and asset audit
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/verify-dependency-inventory.py
+      - run: python3 scripts/audit-publication.py
+  vulnerabilities:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [osx-arm64, osx-x64, win-x64, linux-x64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore PaddiChess.slnx -r ${{ matrix.rid }} --locked-mode
+      - run: python3 scripts/check-vulnerabilities.py --output artifacts/dependencies/${{ matrix.rid }}.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependencies-${{ matrix.rid }}
+          path: artifacts/dependencies/**
+          retention-days: 14

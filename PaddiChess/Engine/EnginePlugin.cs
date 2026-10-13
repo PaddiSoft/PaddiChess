@@ -15,6 +15,7 @@ public sealed class EnginePlugin
     public string Author { get; set; } = "";
     public Dictionary<string, string> RuleOptions { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public List<UciEngineOption> DetectedRuleOptions { get; set; } = [];
+    [JsonIgnore] public RuleCapabilities Rules => RuleCapabilities.FromUci(Name, DetectedRuleOptions);
     [JsonIgnore] public bool IsBundled => Id == BundledId;
     public static EnginePlugin Bundled() => new()
     {

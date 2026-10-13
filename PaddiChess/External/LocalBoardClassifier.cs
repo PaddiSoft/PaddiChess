@@ -24,6 +24,7 @@ public static class LocalBoardClassifier
     });
 
     public static Task PrepareAsync() => Instance.Value.PrepareAsync();
+    internal static void EnsureReady() => _ = Instance.Value;
 
     public sealed record Prediction(char[] Pieces, double[] Confidence, bool RedAtTop, bool[]? VisibleEmptyGrid = null)
     {

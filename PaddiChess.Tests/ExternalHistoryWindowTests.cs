@@ -62,7 +62,7 @@ public sealed class ExternalHistoryWindowTests
                     Click(window, "PreviewFlipButton"); Assert.False(board.Flipped);
                     window.UpdateLayout();
                     foreach (var name in new[] { "SessionsList", "EventsList", "EventDetails", "EventBoard",
-                        "ProgramPositionButton", "BeforePositionButton", "RecognizedPositionButton", "PreviewFlipButton", "ReplayButton" })
+                        "ProgramPositionButton", "BeforePositionButton", "RecognizedPositionButton", "PreviewFlipButton", "ReplayButton", "PreviousEvents", "NextEvents", "RetentionChoice", "ConfirmCleanup" })
                     {
                         var control = window.FindControl<Control>(name)!;
                         var origin = control.TranslatePoint(default, window)!.Value;

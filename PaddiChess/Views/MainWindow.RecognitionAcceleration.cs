@@ -15,7 +15,7 @@ public partial class MainWindow
         {
             var statuses = RecognitionAcceleration.Status;
             if (statuses.Count == 0) return;
-            var text = string.Join(" · ", statuses.Select(s => $"{(s.Model == "棋子模型" ? "棋子" : "OCR")} {s.Backend.Split(" · ")[0]}{(s.Preparing ? "（预热）" : "")}"));
+            var text = string.Join(" · ", statuses.Select(s => $"{(s.Model switch { "棋子模型" => "棋子", "中文 OCR" => "OCR", _ => s.Model })} {s.Backend.Split(" · ")[0]}{(s.Preparing ? "（预热）" : "")}"));
             var detail = string.Join("\n", statuses.Select(s => $"{s.Model} · {s.Backend}：{s.Detail}"));
             if (RecognitionDeviceText.Text == text && Equals(RecognitionDeviceText.Tag, detail)) return;
             RecognitionDeviceText.Text = text;
@@ -24,6 +24,6 @@ public partial class MainWindow
         });
         Closed += (_, _) => _recognitionStatusTimer.Stop();
         _recognitionStatusTimer.Start();
-        _ = RecognitionAcceleration.PrepareAsync();
+        _ = RecognitionHost.PrepareAsync(_positionRecognizer);
     }
 }

@@ -15,7 +15,7 @@ public sealed record ControllerDecision(string Fen, string Move, LlmMoveResult? 
 /// Its host owns request cancellation and checks position/configuration identity before
 /// displaying progress or committing a result. No model response can bypass native rules.
 /// </summary>
-public sealed class ControllerDecisionService(PikafishRulesClient rules, LlmChessClient models)
+public sealed class ControllerDecisionService(IRuleMoveProvider rules, LlmChessClient models)
 {
     public async Task<ControllerDecision> DecideAsync(ControllerDecisionRequest request,
         PikafishClient engine, Action<EngineInfo>? engineProgress, IProgress<LlmProgress>? modelProgress,
@@ -25,6 +25,8 @@ public sealed class ControllerDecisionService(PikafishRulesClient rules, LlmChes
         NativeRuleMoves? allowed = null;
         if (request.Model != null || (request.Bundled && request.Settings.Level < 12))
         {
+            if (!rules.Capabilities.CanQueryAllowedMoves)
+                throw new NotSupportedException("该规则提供者不支持查询允许着法，未请求模型或发送输入。");
             allowed = await rules.GetAllowedMovesAsync(request.StartFen, request.History, request.Fen, ct).ConfigureAwait(false);
             ct.ThrowIfCancellationRequested();
             if (allowed.Allowed.Count == 0)

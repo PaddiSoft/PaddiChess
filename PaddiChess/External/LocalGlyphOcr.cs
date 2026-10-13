@@ -23,6 +23,7 @@ public static class LocalGlyphOcr
     });
 
     public static Task PrepareAsync() => Instance.Value.Session.PrepareAsync();
+    internal static void EnsureReady() => _ = Instance.Value;
 
     public sealed record ReadResult(Glyph[] Glyphs, int InferenceCells, int ReusedCells, int Batches, double ElapsedMs)
     {

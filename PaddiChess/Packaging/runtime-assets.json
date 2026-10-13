@@ -1,0 +1,51 @@
+[
+  {
+    "file": "Pikafish.2026-09-25/pikafish.nnue",
+    "sha256": "7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e",
+    "notices": [
+      "PaddiChess/Packaging/Engine-README.md",
+      "PaddiChess/Native/PikafishRules/upstream/Copying.txt",
+      "Pikafish.2026-09-25/NNUE权重协议（使用视为同意本协议）_NNUE License.txt"
+    ]
+  },
+  {
+    "file": "Pikafish.2026-09-25/Pikafish-Linux-x86-64-universal",
+    "sha256": "e3364787ca970c0b110f72a1325bcc6f88949a86511a216366432999b9188a22",
+    "notices": [
+      "PaddiChess/Packaging/Engine-README.md",
+      "PaddiChess/Native/PikafishRules/upstream/Copying.txt"
+    ]
+  },
+  {
+    "file": "Pikafish.2026-09-25/Pikafish-MacOS-universal",
+    "sha256": "dfa1aed00d416d9684163235bb127da41353833e61d7d5144a90a866e47e4ab9",
+    "notices": [
+      "PaddiChess/Packaging/Engine-README.md",
+      "PaddiChess/Native/PikafishRules/upstream/Copying.txt"
+    ]
+  },
+  {
+    "file": "Pikafish.2026-09-25/Pikafish-Windows-x86-64-universal.exe",
+    "sha256": "9824fff4e3c4a72afbc6cfdc611c140b32f79e3c5fd5fe4bf6d747833875b86d",
+    "notices": [
+      "PaddiChess/Packaging/Engine-README.md",
+      "PaddiChess/Native/PikafishRules/upstream/Copying.txt"
+    ]
+  },
+  {
+    "file": "PaddiChess/Assets/Ocr/ch_PP-OCRv5_rec_mobile.onnx",
+    "sha256": "5825fc7ebf84ae7a412be049820b4d86d77620f204a041697b0494669b1742c5",
+    "notices": [
+      "PaddiChess/Assets/Ocr/SOURCE.md",
+      "PaddiChess/Assets/Ocr/PaddleOCR-LICENSE"
+    ]
+  },
+  {
+    "file": "PaddiChess/Assets/Recognition/xiangqi-nano-v3.onnx",
+    "sha256": "da66ba9809f15127f8ae729b1755e42ee61c100c4f9979ce0ef13602ac471298",
+    "notices": [
+      "PaddiChess/Assets/Recognition/SOURCE.md",
+      "PaddiChess/Assets/Recognition/LICENSE.txt"
+    ]
+  }
+]

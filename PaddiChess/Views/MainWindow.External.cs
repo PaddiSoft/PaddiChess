@@ -99,7 +99,7 @@ public partial class MainWindow
         RefreshSkins();
         if (!ExternalDesktop.Supported)
         {
-            ExternalStatusText.Text = "Linux 版暂未接入外部窗口捕获与输入授权。本地对弈、引擎与大模型功能仍可使用。";
+            ExternalStatusText.Text = "外部接管需要可访问的 X11 桌面；当前 Wayland／无桌面环境暂不支持。本地对弈、引擎与大模型功能仍可使用。";
             ExternalRefreshButton.IsEnabled = ExternalConfigPanel.IsEnabled = ExternalStartButton.IsEnabled = false;
         }
         ExternalWindowBox.SelectionChanged += (_, _) =>
@@ -432,10 +432,7 @@ public partial class MainWindow
         Task? inputPreparation = null;
         Task? releaseLocalEngine = null;
         Task<Exception?>? inputTask = null;
-        Task<ExternalDecision>? decisionTask = null;
-        CancellationTokenSource? decisionCancellation = null;
-        string? decisionFen = null;
-        ExternalControllerConfiguration? decisionConfiguration = null;
+        await using var coordinator = new ExternalSessionCoordinator<ExternalDecision, ExternalControllerConfiguration>(ct);
         ExternalDecision? lastInputDecision = null;
         ExternalDecision? recordedDecision = null;
         var inputRetryAfter = DateTimeOffset.MinValue;
@@ -443,12 +440,17 @@ public partial class MainWindow
         GameResult? completedResult = null;
         using var inputLifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
         using var warmupLifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        await using var recognitionRefresh = new ExternalRecognitionRefresh(ct);
-        await using var inputVerification = new ExternalRecognitionRefresh(ct, TimeSpan.FromMilliseconds(250));
-        var inputRetry = new ExternalInputRetry();
+        var recognitionRefresh = coordinator.Recognition;
+        var inputVerification = coordinator.Verification;
+        var inputRetry = coordinator.InputRetry;
         string? lastVerificationStatus = null;
         var nextVerificationReport = TimeSpan.Zero;
         BoardObservation? submittedFrame = null;
+        async Task RecordMetricsAsync()
+        {
+            foreach (var stage in coordinator.Metrics.Snapshot())
+                await RecordExternalHistoryAsync("performance", $"{stage.Stage} · {stage.Samples} 次 · P50 {stage.P50Ms:F1} / P95 {stage.P95Ms:F1} / P99 {stage.P99Ms:F1} ms（最近 2048 次）");
+        }
         async Task<Exception?> SendInputAsync(double fx, double fy, double tx, double ty, bool finishSelection = false)
         {
             var inputClock = System.Diagnostics.Stopwatch.StartNew();
@@ -457,6 +459,7 @@ public partial class MainWindow
             {
                 if (finishSelection) await desktop.CompleteSelectedMoveAsync(target, fx, fy, tx, ty, inputLifetime.Token);
                 else await desktop.MoveAsync(target, fx, fy, tx, ty, inputLifetime.Token);
+                coordinator.Metrics.Record("native-input", inputClock.Elapsed.TotalMilliseconds);
                 await RecordExternalHistoryAsync("input-completed", $"原生输入已完成 · {inputClock.Elapsed.TotalMilliseconds:F0} ms · 等待画面确认", move: inputMove);
                 return null;
             }
@@ -500,12 +503,11 @@ public partial class MainWindow
             _game.GoToPly(_game.TotalPly); Board.Flipped = calibration.RedAtTop; Board.Refresh(); RefreshUi();
             initialized?.TrySetResult(true);
             if (_externalTurnKnown) QueueExternalScore();
-            var synchronization = new ExternalSynchronizationSession();
+            var synchronization = coordinator.Synchronization;
             var observationReader = new ExternalObservationReader(calibration);
             string? pending = _externalPendingMove;
             LlmMoveResult? pendingThought = _externalPendingThought;
             var moveSentAt = DateTimeOffset.UtcNow;
-            var cadence = Stopwatch.StartNew();
             var sessionClock = Stopwatch.StartNew();
             long nextMetricsAt = 0;
             string? lastObservationEvent = null;
@@ -534,17 +536,14 @@ public partial class MainWindow
             var captureImmediately = true;
             while (!ct.IsCancellationRequested)
             {
+                coordinator.SetInputEnabled(_externalRunning);
                 pollMs = ExternalSpeedBox.SelectedIndex switch { 0 => 33, 2 => 250, _ => 80 };
                 // Sampling continues during search, model requests and native input. Poll settings are a
                 // start-to-start cadence, not an extra sleep added after capture/recognition.
                 var recovering = synchronization.UnrecognizedSince is { } since && sessionClock.Elapsed - since > TimeSpan.FromSeconds(3);
-                var interval = synchronization.HasCandidate || turnObserver?.HasCandidate == true ? Math.Min(pollMs, 80)
-                    : recovering ? Math.Max(pollMs, 120)
-                    : pending != null || inputTask != null ? Math.Min(pollMs, 80) : pollMs;
-                var delay = captureImmediately ? 0 : Math.Max(1, interval - (int)cadence.ElapsedMilliseconds);
+                await coordinator.WaitForCaptureAsync(pollMs, captureImmediately,
+                    synchronization.HasCandidate || turnObserver?.HasCandidate == true, recovering, pending != null || inputTask != null);
                 captureImmediately = false;
-                if (delay > 0) await Task.Delay(delay, ct);
-                cadence.Restart();
                 if (inputTask is { IsCompleted: true })
                 {
                     var failure = await inputTask;
@@ -566,7 +565,7 @@ public partial class MainWindow
                             // The helper guarantees no input was sent. Reuse this result
                             // only for the same position, without another model/API request.
                             if (lastInputDecision is { } retry)
-                            { decisionFen = retry.Fen; decisionTask = Task.FromResult(retry); }
+                            { coordinator.UsePrepared(retry.Fen, coordinator.Configuration!, retry); }
                         }
                     }
                     else if (failure is ExternalPermissionException)
@@ -580,6 +579,7 @@ public partial class MainWindow
                 var clock = Stopwatch.StartNew();
                 var frame = await CaptureExternalWithRecoveryAsync(desktop, target, ct);
                 var captureMs = clock.Elapsed.TotalMilliseconds;
+                coordinator.Metrics.Record("capture", captureMs);
                 UpdateCaptureGeometry(frame);
                 clock.Restart();
                 var observation = await observationReader.ReadAsync(frame, ct);
@@ -616,6 +616,7 @@ public partial class MainWindow
                     await RecordExternalHistoryAsync("observation", match.Message, candidates: match.Moves, observedFen: sync.ObservedFen);
                 }
                 var recognitionMs = clock.Elapsed.TotalMilliseconds;
+                coordinator.Metrics.Record("tracking", recognitionMs);
                 // Board confirmation stays at capture cadence; diagnostic text needs
                 // only 5 Hz and must not trigger text layout on every captured frame.
                 if (sessionClock.ElapsedMilliseconds >= nextMetricsAt || match.Moves.Count > 0)
@@ -651,7 +652,7 @@ public partial class MainWindow
                 ct.ThrowIfCancellationRequested();
                 if (match.Moves.Count > 0 || correction != null) RefreshExternalControllerConfiguration();
                 synchronization.OnCommitted(_game, priorPly);
-                if (decisionTask is not null && decisionFen != _game.CurrentFen()) decisionCancellation?.Cancel();
+                coordinator.CancelIfChanged(_game.CurrentFen(), _externalActiveConfiguration);
                 if (_externalPreparedDecision?.Fen != _game.CurrentFen()) _externalPreparedDecision = null;
                 pending = _externalPendingMove;
                 pendingThought = _externalPendingThought;
@@ -670,9 +671,9 @@ public partial class MainWindow
                 }
                 if (_game.Result != GameResult.Ongoing)
                 {
-                    decisionCancellation?.Cancel();
-                    if (decisionTask is { IsCompleted: true })
-                    { await decisionTask; decisionTask = null; decisionCancellation?.Dispose(); decisionCancellation = null; }
+                    coordinator.CancelDecision();
+                    if (coordinator.Decision is { IsCompleted: true })
+                    { await coordinator.CollectAsync(); }
                     ShowExternalRecovery(_game.SideInCheck
                         ? "正在核验绝杀局面，暂停落子并继续同步；确认后自动结束接管。"
                         : "当前局面暂无合法着法，暂停落子并继续同步；对局结果以目标游戏为准。");
@@ -697,7 +698,7 @@ public partial class MainWindow
                     else if (desktop.CanCompleteSelectedMove && desktop.InputMode == ExternalInputMode.Click &&
                         _externalRunning && lastInputDecision is { } intent && intent.Move == pending &&
                         intent.Fen == _game.CurrentFen() && intent.RuleHistory == _game.UciMoveList &&
-                        intent.RuleStartFen == _game.StartFen && decisionConfiguration == _externalActiveConfiguration &&
+                        intent.RuleStartFen == _game.StartFen && coordinator.Configuration == _externalActiveConfiguration &&
                         DateTimeOffset.UtcNow >= inputRetryAfter && inputRetry.ObserveUnchanged(sessionClock.Elapsed))
                     {
                         Square.TryParseUci(pending[..2], out var retryFrom); Square.TryParseUci(pending[2..], out var retryTo);
@@ -728,12 +729,12 @@ public partial class MainWindow
                 }
                 red = configured.Red;
                 model = configured.Model;
-                if (decisionTask != null && decisionConfiguration != configured) decisionCancellation?.Cancel();
+                coordinator.CancelIfChanged(_game.CurrentFen(), configured);
                 if (_game.RedToMove != red)
                 {
-                    decisionCancellation?.Cancel();
-                    if (decisionTask is { IsCompleted: true })
-                    { await decisionTask; decisionTask = null; decisionCancellation?.Dispose(); decisionCancellation = null; }
+                    coordinator.CancelDecision();
+                    if (coordinator.Decision is { IsCompleted: true })
+                    { await coordinator.CollectAsync(); }
                     ExternalStatusText.Text = $"已同步 {_game.Ply} 手 · 等待{(_game.RedToMove ? "红" : "黑")}方走棋" +
                         (_externalRunning ? "" : " · 已连接，尚未允许落子");
                     continue;
@@ -756,43 +757,36 @@ public partial class MainWindow
                         token => ReadVerifiedExternalPositionAsync(frame, readyGeometry, readyTurn,
                             token, false, readySkin, readyPath));
                 }
-                if (decisionTask == null && _externalPreparedDecision is { } prepared)
+                if (coordinator.Decision == null && _externalPreparedDecision is { } prepared)
                 {
                     if (prepared.Error != null)
                     { ExternalStatusText.Text = "预计算未完成：" + prepared.Error.Message + " · 可调整配置或点击开始重试。"; continue; }
                     if (!_externalRunning)
                     { ExternalStatusText.Text = $"已同步 {_game.Ply} 手 · {(model?.Model ?? DefaultEngine.Name)} 已预计算，点击开始接管即可落子。"; continue; }
-                    decisionFen = prepared.Fen;
-                    decisionConfiguration = configured;
-                    decisionTask = Task.FromResult(prepared);
+                    coordinator.UsePrepared(prepared.Fen, configured, prepared);
                 }
-                if (decisionTask is null)
+                if (coordinator.Decision is null)
                 {
                     if (_game.AllControllerLegalMoves().Count == 0)
                     {
                         ShowExternalRecovery("当前没有合法候选，暂停自动落子并继续同步；可修正轮次或手动处理。");
                         continue;
                     }
-                    decisionFen = _game.CurrentFen();
-                    decisionConfiguration = configured;
-                    decisionCancellation = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    _externalDecisionCancellation = decisionCancellation;
-                    decisionTask = CalculateExternalDecisionAsync(engine, red, model, decisionCancellation.Token);
+                    coordinator.Start(_game.CurrentFen(), configured, token => CalculateExternalDecisionAsync(engine, red, model, token));
+                    _externalDecisionCancellation = coordinator.DecisionCancellation;
                     continue;
                 }
-                if (!decisionTask.IsCompleted)
+                if (!coordinator.Decision.IsCompleted)
                 {
                     ExternalStatusText.Text = model is null
                         ? DefaultEngine.Name + " 正在计算 · " + PlayingBudgetDescription(
-                            decisionConfiguration?.EngineSettings ?? ReadPlayingEngineSettings())
+                            coordinator.Configuration?.EngineSettings ?? ReadPlayingEngineSettings())
                         : $"{model.Model} 思考中 · 等级 {model.ReasoningEffort ?? "自动"}";
                     continue;
                 }
-                var decision = await decisionTask;
-                decisionTask = null;
-                decisionCancellation?.Dispose(); decisionCancellation = null;
+                var decision = await coordinator.CollectAsync();
                 ct.ThrowIfCancellationRequested();
-                if (decision.Cancelled || decision.Fen != _game.CurrentFen() || decisionConfiguration != _externalActiveConfiguration) continue;
+                if (decision.Cancelled || decision.Fen != _game.CurrentFen() || coordinator.Configuration != _externalActiveConfiguration) continue;
                 if (decision.RuleHistory is not null &&
                     (decision.RuleStartFen != _game.StartFen || decision.RuleHistory != _game.UciMoveList))
                 { _externalPreparedDecision = null; continue; }
@@ -825,31 +819,25 @@ public partial class MainWindow
                     2 => ExternalInputDelivery.TargetWindowFocused,
                     _ => ExternalInputDelivery.SystemCursor
                 };
-                var beforeClick = await CaptureExternalWithRecoveryAsync(desktop, target, ct);
-                if (UpdateCaptureGeometry(beforeClick)) { captureImmediately = true; continue; }
-                var check = await observationReader.ReadAsync(beforeClick, ct);
-                // Full inference runs independently so observation, turn updates and
-                // engine completion cannot stall behind OCR. Bind the read to history
-                // and reclassify changed samples before authorizing this fresh frame.
                 var verificationIdentity = _game.StartFen + "|" + _game.UciMoveList;
                 var verificationSkin = _externalSessionSkin;
                 var verificationPath = (ExternalSkinBox.SelectedItem as SkinChoice)?.Path;
-                var identityRead = await Task.Run(() => inputVerification.Current(verificationIdentity, null, check), ct);
-                if (identityRead is not { Confident: true })
+                var verificationTurn = _game.RedToMove;
+                var verification = await coordinator.VerifyInputAsync(verificationIdentity, _externalTracker!, _game,
+                    sessionClock.Elapsed, async token =>
+                    {
+                        var fresh = await CaptureExternalWithRecoveryAsync(desktop, target, token);
+                        var changed = UpdateCaptureGeometry(fresh);
+                        return new VerificationFrame(fresh, await observationReader.ReadAsync(fresh, token), calibration, changed);
+                    }, (fresh, token) => ReadVerifiedExternalPositionAsync(fresh.Capture, fresh.Calibration,
+                        verificationTurn, token, false, verificationSkin, verificationPath), ct);
+                var check = verification.Frame.Observation;
+                var identityRead = verification.Read;
+                if (verification.WaitingReason is { } reason)
                 {
-                    var verificationGeometry = calibration;
-                    var verificationTurn = _game.RedToMove;
-                    inputVerification.TryStart(verificationIdentity, null, check, sessionClock.Elapsed,
-                        token => ReadVerifiedExternalPositionAsync(beforeClick, verificationGeometry, verificationTurn,
-                            token, false, verificationSkin, verificationPath));
-                    var reason = identityRead is { Uncertain.Count: > 0 }
-                        ? $"正在核验 {identityRead.Uncertain.Count} 个不确定位置"
-                        : identityRead?.Problem ?? inputVerification.LastFailure ?? "正在核验最新棋盘";
+                    captureImmediately = verification.RetryImmediately;
                     var status = $"计算已完成 · {reason}，核验后自动落子…";
                     ExternalStatusText.Text = status;
-                    // Animated samples can alternate between an uncertain cell and
-                    // no frame-bound result every poll. Do not flush a log entry at
-                    // capture rate while waiting for the same prepared decision.
                     if (lastVerificationStatus == null || sessionClock.Elapsed >= nextVerificationReport)
                     {
                         lastVerificationStatus = status;
@@ -861,27 +849,11 @@ public partial class MainWindow
                     }
                     continue;
                 }
-                var beforeInput = await Task.Run(() => ExternalInputVerification.Check(_externalTracker!, _game, check, identityRead), ct);
-                if (beforeInput is { Recognized: true, Moves.Count: 0 })
-                {
-                    var latest = await CaptureExternalWithRecoveryAsync(desktop, target, ct);
-                    if (UpdateCaptureGeometry(latest)) { captureImmediately = true; continue; }
-                    check = await observationReader.ReadAsync(latest, ct);
-                    var latestRead = await Task.Run(() => inputVerification.Current(verificationIdentity, null, check), ct);
-                    if (latestRead is not { Confident: true })
-                    {
-                        ExternalStatusText.Text = "计算已完成 · 最新画面仍有变化，正在核验棋子…";
-                        captureImmediately = true;
-                        continue;
-                    }
-                    identityRead = latestRead;
-                    beforeInput = await Task.Run(() => ExternalInputVerification.Check(_externalTracker!, _game, check, identityRead), ct);
-                }
-                recognitionRefresh.Seed(verificationIdentity, null, check, identityRead);
+                var beforeInput = verification.Match!;
                 ct.ThrowIfCancellationRequested();
                 if (!_externalRunning || !_externalTurnKnown || _game.RedToMove != red ||
                     decision.Fen != _game.CurrentFen() || decision.RuleStartFen != _game.StartFen ||
-                    decision.RuleHistory != _game.UciMoveList || decisionConfiguration != _externalActiveConfiguration) continue;
+                    decision.RuleHistory != _game.UciMoveList || coordinator.Configuration != _externalActiveConfiguration) continue;
                 if (beforeInput is not { Recognized: true, Moves.Count: 0 })
                 {
                     // A confident conflict invalidates the decision. An inconclusive
@@ -911,6 +883,7 @@ public partial class MainWindow
                 submittedFrame = check;
                 var sourcePoint = ExternalCaptureGeometry.ToWindowPoint(source.X, source.Y, check.Width, check.Height, target);
                 var destinationPoint = ExternalCaptureGeometry.ToWindowPoint(dest.X, dest.Y, check.Width, check.Height, target);
+                coordinator.InputSubmitted();
                 inputTask = SendInputAsync(sourcePoint.X, sourcePoint.Y, destinationPoint.X, destinationPoint.Y);
                 // The current helper is consumed once. Prepare another only for
                 // the next confirmed turn, and never wait for warmup before input.
@@ -920,6 +893,7 @@ public partial class MainWindow
                 captureImmediately = true;
 
             }
+            await RecordMetricsAsync();
             ExternalStatusText.Text = completedResult is { } result
                 ? $"绝杀 · {(result == GameResult.RedWins ? "红" : "黑")}方获胜，接管已自动结束；最终棋盘和棋谱已保留。"
                 : "接管已停止。";
@@ -927,23 +901,27 @@ public partial class MainWindow
         }
         catch (OperationCanceledException)
         {
+            await RecordMetricsAsync();
             await RecordExternalHistoryAsync("paused", "接管已暂停，继续时先核验最新局面", move: _externalPendingMove);
             ExternalStatusText.Text = "接管已暂停，保留棋盘和棋谱。点击继续会先核验最新局面。";
         }
         catch (ExternalPermissionException ex)
         {
+            await RecordMetricsAsync();
             await RecordExternalHistoryAsync("error", "权限异常：" + ex.Message, move: _externalPendingMove);
             _externalPermissions = ex.Permission == ExternalPermission.ScreenCapture ? new(false,_externalPermissions.Accessibility) : new(_externalPermissions.ScreenCapture,false);
             ShowExternalPermissionState(ex.Message);
         }
         catch (Exception ex)
         {
+            await RecordMetricsAsync();
             await RecordExternalHistoryAsync("error", ex.Message, move: _externalPendingMove);
             ExternalStatusText.Text = ex.Message;
         }
         finally
         {
             emergency.Stop();
+
             if (completedResult is { } finalResult)
                 await EndExternalHistoryAsync("对局结束：" + (finalResult == GameResult.RedWins ? "红方获胜" : "黑方获胜"));
             else await FlushExternalHistoryAsync();
@@ -953,10 +931,9 @@ public partial class MainWindow
             if (warmup != null) await warmup;
             if (inputPreparation != null)
                 try { await inputPreparation; } catch (OperationCanceledException) { }
-            decisionCancellation?.Cancel();
+            coordinator.CancelDecision();
             inputLifetime.Cancel();
-            if (decisionTask != null) await decisionTask;
-            decisionCancellation?.Dispose();
+            if (coordinator.Decision != null) await coordinator.CollectAsync();
             _externalDecisionCancellation = null;
             if (inputTask != null && await inputTask is ExternalInputBlockedException { InputStarted: false } &&
                 _externalPendingMove == submittedMove)
