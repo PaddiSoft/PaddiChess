@@ -13,10 +13,17 @@ public class ExternalRecognitionTests(ITestOutputHelper output)
     public void FindsBoardGridInLargerWindow()
     {
         using var board = SKBitmap.Decode(ExternalBoardTests.Render(new XiangqiGame()));
+        // The tracking fixture draws continuous files. A locator fixture needs
+        // the actual Xiangqi river: inner files stop between ranks four and five.
+        // Without it, platform font differences can favour a shifted false grid.
+        using (var boardCanvas = new SKCanvas(board))
+        using (var river = new SKPaint { Color = new SKColor(232, 201, 151) })
+            boardCanvas.DrawRect(42, 242, 396, 46, river);
         using var window = new SKBitmap(1050, 700); using var canvas = new SKCanvas(window);
         canvas.Clear(SKColors.White); canvas.DrawBitmap(board, 73, 61);
         using var png = window.Encode(SKEncodedImageFormat.Png, 100);
         var found = BoardLocator.Locate(png.ToArray());
+        output.WriteLine($"Detected geometry: {found}");
         Assert.NotNull(found);
         Assert.InRange(found.Left, 110, 116); Assert.InRange(found.Top, 98, 104);
         Assert.InRange(found.Right, 510, 516); Assert.InRange(found.Bottom, 548, 554);

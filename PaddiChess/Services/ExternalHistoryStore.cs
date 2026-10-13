@@ -114,7 +114,11 @@ public sealed class ExternalHistoryStore : IAsyncDisposable
                 if (write.Snapshot is { } snapshot)
                 {
                     await File.WriteAllBytesAsync(temporary, snapshot).ConfigureAwait(false);
-                    File.Move(temporary, RecordPath, overwrite: true);
+                    // MoveFileEx cannot overwrite an open destination on Windows even
+                    // when its reader allows deletion. ReplaceFile preserves the old
+                    // reader's snapshot while publishing the new file at this path.
+                    if (File.Exists(RecordPath)) File.Replace(temporary, RecordPath, null);
+                    else File.Move(temporary, RecordPath);
                 }
                 write.Barrier?.TrySetResult();
                 current = null;
