@@ -53,7 +53,7 @@ public static class ExternalHistoryPaging
         return new ExternalEventPage(result, page, more);
     }, ct);
 
-    public static async Task<ExternalEventPage> ReadLastAsync(string? path, CancellationToken ct = default)
+    public static Task<ExternalEventPage> ReadLastAsync(string? path, CancellationToken ct = default) => Task.Run(async () =>
     {
         ct.ThrowIfCancellationRequested();
         if (path is null) return new([], 0, false);
@@ -75,7 +75,7 @@ public static class ExternalHistoryPaging
         var result = await ReadAsync(path, checked((int)page), ct);
         if (page > 0 && result.Events.Count == 0) result = await ReadAsync(path, (int)page - 1, ct);
         return result;
-    }
+    }, ct);
 
     private static async Task EnsureIndexAsync(string path, CancellationToken ct)
     {

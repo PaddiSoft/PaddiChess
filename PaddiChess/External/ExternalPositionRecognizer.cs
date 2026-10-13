@@ -7,6 +7,9 @@ public interface IExternalPositionRecognizer
 {
     Task<SkinRecognition?> ReadAsync(ExternalFrame frame, BoardCalibration geometry,
         bool redToMove, CancellationToken ct, bool detectOrientation, BoardSkin? sessionSkin, string? customPath);
+    Task<SkinRecognition> ReadGlyphsAsync(ExternalFrame frame, BoardCalibration geometry,
+        bool redToMove, CancellationToken ct, bool detectOrientation)
+        => BoardGlyphRecognizer.RecognizeAsync(frame, geometry, redToMove, ct, detectOrientation);
 }
 
 /// <summary>Initial/full-board recognition, separate from the lightweight move tracker.</summary>

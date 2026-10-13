@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Full local/CI gate. Does not launch a GUI, send native input, package or sign releases.
+# Full local/CI gate. Native-input opt-in only targets test-owned windows.
+# Does not start a real game or package releases; native macOS builds are ad-hoc signed.
 set -euo pipefail
 
 if [[ $# -ne 0 ]]; then

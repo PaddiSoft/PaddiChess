@@ -217,6 +217,38 @@ public class PositionEditorInteractionTests
     }
 
     [Fact]
+    public async Task EditorOcrUsesInjectedRecognitionWorkerAndCancelsOnClose()
+    {
+        await ExternalSessionTests.Session.Dispatch(async () =>
+        {
+            var png = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "playxiangqi-opening.png"));
+            var frame = new ExternalFrame(new(500, 500, "棋盘截图", 0, 0, 910, 1010), png);
+            var called = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var window = new ExternalPositionEditorWindow(new(XiangqiGame.InitialFen, "校对局面", null, frame,
+                new(55, 55, 855, 955, false), false, 0), null,
+                (_, _, _, _, _) => throw new InvalidOperationException("OCR must use its own injected path"), default,
+                async (actual, geometry, red, ct, orientation) =>
+                {
+                    Assert.Same(frame, actual);
+                    Assert.True(red); Assert.True(orientation);
+                    called.SetResult(ct);
+                    await Task.Delay(Timeout.Infinite, ct);
+                    throw new InvalidOperationException("unreachable");
+                });
+            try
+            {
+                window.Show();
+                window.FindControl<Button>("ExternalEditorOcr")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                var token = await called.Task.WaitAsync(TimeSpan.FromSeconds(3));
+                Assert.False(window.FindControl<Button>("ExternalEditorAccept")!.IsEnabled);
+                window.Close();
+                Assert.True(token.IsCancellationRequested);
+            }
+            finally { window.Close(); }
+        }, default);
+    }
+
+    [Fact]
     public async Task ValidationChangesDoNotEnableAcceptWhileRecognitionIsBusy()
     {
         await ExternalSessionTests.Session.Dispatch(async () =>

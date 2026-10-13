@@ -38,7 +38,8 @@ public partial class MainWindow
             _externalSetupCancellation?.Token ?? CancellationToken.None);
         var context = new ExternalPositionEditorContext(fen, message, uncertain, _externalFrame, _externalCalibration,
             ExternalOrientationBox.SelectedIndex == 1, ExternalTurnBox.SelectedIndex, standardOpening);
-        var dialog = new ExternalPositionEditorWindow(context, _externalDesktop, ReadExternalSkinAsync, cancellation.Token);
+        var dialog = new ExternalPositionEditorWindow(context, _externalDesktop, ReadExternalSkinAsync,
+            cancellation.Token, _positionRecognizer.ReadGlyphsAsync);
         var result = await dialog.ShowDialog<ExternalPositionEditResult?>(this);
         if (result == null || cancellation.IsCancellationRequested || _closing) return;
         if (result.Frame != null && result.Geometry != null)

@@ -13,7 +13,7 @@ public static class RecognitionHost
 }
 
 public sealed record RecognitionWorkerRequest(BoardCalibration? Geometry, bool RedToMove, bool DetectOrientation,
-    int Width = 0, int Height = 0, int RowBytes = 0);
+    int Width = 0, int Height = 0, int RowBytes = 0, bool GlyphsOnly = false);
 public sealed record RecognitionWorkerReply(SkinRecognition? Read, RecognitionDeviceStatus[] Devices, string? Error = null);
 
 /// <summary>A length-delimited control message; pixels use raw BGRA to avoid PNG/base64 latency.</summary>
@@ -58,8 +58,11 @@ public static class RecognitionWorkerProtocol
                     var pixels = new CapturedPixels(request.Width, request.Height, request.RowBytes, new byte[(int)size]);
                     await input.ReadExactlyAsync(pixels.Bgra, ct).ConfigureAwait(false);
                     var frame = new ExternalFrame(new ExternalWindow(0, 0, "recognition", 0, 0, request.Width, request.Height), pixels);
-                    read = await recognizer.ReadAsync(frame, request.Geometry, request.RedToMove, ct,
-                        request.DetectOrientation, null, null).ConfigureAwait(false);
+                    read = request.GlyphsOnly
+                        ? await BoardGlyphRecognizer.RecognizeAsync(frame, request.Geometry, request.RedToMove, ct,
+                            request.DetectOrientation).ConfigureAwait(false)
+                        : await recognizer.ReadAsync(frame, request.Geometry, request.RedToMove, ct,
+                            request.DetectOrientation, null, null).ConfigureAwait(false);
                 }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -103,6 +106,15 @@ public sealed class RecognitionWorkerClient(Func<bool, ProcessStartInfo> startIn
     {
         var pixels = frame.Pixels ?? CapturedPixels.DecodePng(frame.Png);
         return ExchangeAsync(new(geometry, redToMove, detectOrientation, pixels.Width, pixels.Height, pixels.RowBytes), pixels, ct);
+    }
+
+    public async Task<SkinRecognition> ReadGlyphsAsync(ExternalFrame frame, BoardCalibration geometry, bool redToMove,
+        CancellationToken ct, bool detectOrientation)
+    {
+        var pixels = frame.Pixels ?? CapturedPixels.DecodePng(frame.Png);
+        return await ExchangeAsync(new(geometry, redToMove, detectOrientation, pixels.Width, pixels.Height,
+            pixels.RowBytes, GlyphsOnly: true), pixels, ct).ConfigureAwait(false)
+            ?? throw new IOException("识字进程未返回局面");
     }
 
     private async Task<SkinRecognition?> ExchangeAsync(RecognitionWorkerRequest request, CapturedPixels? pixels, CancellationToken ct)

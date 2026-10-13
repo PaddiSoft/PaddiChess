@@ -136,6 +136,19 @@ public static class X11DesktopWorker
         var keys = new byte[32]; XQueryKeymap(d, keys); var code = XKeysymToKeycode(d, 0xff1b);
         return (keys[code / 8] & (1 << (code % 8))) != 0;
     }
+    private static nuint TopLevel(nint d, nuint window)
+    {
+        var root = XDefaultRootWindow(d);
+        for (int depth = 0; depth < 32; depth++)
+        {
+            if (XQueryTree(d, window, out _, out var parent, out var children, out _) == 0)
+                throw new IOException("窗口层级不可访问");
+            if (children != 0) XFree(children);
+            if (parent == root || parent == 0) return window;
+            window = parent;
+        }
+        throw new IOException("窗口层级异常");
+    }
     private static async Task MoveAsync(nint d, X11Request request)
     {
         var old = request.Window!; var w = Describe(d, (nuint)old.Id);
@@ -143,7 +156,8 @@ public static class X11DesktopWorker
         foreach (var point in new[] { (request.FromX, request.FromY), (request.ToX, request.ToY) })
             if (!double.IsFinite(point.Item1) || !double.IsFinite(point.Item2) || point.Item1 < 0 || point.Item2 < 0 || point.Item1 >= w.Width || point.Item2 >= w.Height)
                 throw new ExternalInputBlockedException(false, "落子坐标越界");
-        XRaiseWindow(d, (nuint)w.Id); XSetInputFocus(d, (nuint)w.Id, 1, 0); XSync(d, 0);
+        var topLevel = TopLevel(d, (nuint)w.Id);
+        XRaiseWindow(d, topLevel); XSetInputFocus(d, (nuint)w.Id, 1, 0); XSync(d, 0);
         if (_error != 0) throw new ExternalInputBlockedException(false, "无法聚焦目标窗口");
         bool started = false, down = false;
         void Point(double x, double y)
@@ -152,7 +166,9 @@ public static class X11DesktopWorker
             var current = Describe(d, (nuint)w.Id);
             if (!current.SameBounds(w)) throw new ExternalInputBlockedException(started, "窗口移动，已停止输入");
             XTestFakeMotionEvent(d, -1, (int)Math.Round(w.X + x), (int)Math.Round(w.Y + y), 0); XSync(d, 0);
-            XQueryPointer(d, (nuint)w.Id, out _, out _, out var rx, out var ry, out _, out _, out _);
+            XQueryPointer(d, XDefaultRootWindow(d), out _, out var underPointer, out var rx, out var ry, out _, out _, out _);
+            if (underPointer != topLevel)
+                throw new ExternalInputBlockedException(started, "目标被其他窗口遮挡，已停止输入");
             if (Math.Abs(rx - (w.X + x)) > 2 || Math.Abs(ry - (w.Y + y)) > 2)
                 throw new ExternalInputBlockedException(started, "鼠标位置发生变化，已停止输入");
         }

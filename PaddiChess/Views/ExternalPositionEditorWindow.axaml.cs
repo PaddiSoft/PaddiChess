@@ -28,7 +28,8 @@ public partial class ExternalPositionEditorWindow : Window
 
     public ExternalPositionEditorWindow(ExternalPositionEditorContext context, IExternalDesktop? desktop,
         Func<ExternalFrame, BoardCalibration, bool, CancellationToken, bool, Task<SkinRecognition?>> recognize,
-        CancellationToken cancellation)
+        CancellationToken cancellation,
+        Func<ExternalFrame, BoardCalibration, bool, CancellationToken, bool, Task<SkinRecognition>>? recognizeGlyphs = null)
     {
         InitializeComponent();
         _lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
@@ -137,7 +138,7 @@ public partial class ExternalPositionEditorWindow : Window
                 ct.ThrowIfCancellationRequested();
                 nextGeometry = nextGeometry! with { RedAtTop = nextDirection };
                 var read = useOcr
-                    ? await BoardGlyphRecognizer.RecognizeAsync(next,nextGeometry,turn.SelectedIndex == 0,ct,desiredDirection == null)
+                    ? await (recognizeGlyphs ?? BoardGlyphRecognizer.RecognizeAsync)(next,nextGeometry,turn.SelectedIndex == 0,ct,desiredDirection == null)
                     : await recognize(next,nextGeometry,turn.SelectedIndex == 0,ct,desiredDirection == null);
                 ct.ThrowIfCancellationRequested();
                 if (closed || operation != revision) return;
