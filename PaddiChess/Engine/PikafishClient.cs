@@ -62,8 +62,9 @@ public sealed partial class PikafishClient : IAsyncDisposable
     public int ReadyHandshakeCount => Volatile.Read(ref _readyHandshakeCount);
     public int ProcessStartCount => Volatile.Read(ref _processStartCount);
 
-    private static Channel<string> NewLineChannel() => Channel.CreateUnbounded<string>(
-        new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
+    private static Channel<string> NewLineChannel() => Channel.CreateBounded<string>(
+        new BoundedChannelOptions(1024)
+        { SingleReader = true, SingleWriter = true, FullMode = BoundedChannelFullMode.Wait });
 
     public static string BundledEnginePath()
     {
@@ -226,12 +227,14 @@ public sealed partial class PikafishClient : IAsyncDisposable
             try
             {
                 while (await process.StandardOutput.ReadLineAsync().ConfigureAwait(false) is { } line)
-                    lines.Writer.TryWrite(line);
+                    await lines.Writer.WriteAsync(line).ConfigureAwait(false);
             }
             catch (Exception ex) { lines.Writer.TryComplete(ex); }
             finally { lines.Writer.TryComplete(); }
         });
-        _ = process.StandardError.ReadToEndAsync();
+        // Keep draining diagnostics so a noisy plugin cannot block on stderr.
+        // ReadToEndAsync retained the entire log for the lifetime of the engine.
+        _ = DrainDiagnosticsAsync(process.StandardError.BaseStream);
 
         _options.Clear(); EngineAuthor = ""; ResolvedEvalPath = null;
         Send("uci");
@@ -317,6 +320,12 @@ public sealed partial class PikafishClient : IAsyncDisposable
             if (_process is not { HasExited: false }) throw new IOException("皮卡鱼引擎已退出。");
             _process.StandardInput.WriteLine(command);
         }
+    }
+
+    private static async Task DrainDiagnosticsAsync(Stream stream)
+    {
+        try { await stream.CopyToAsync(Stream.Null).ConfigureAwait(false); }
+        catch (Exception error) when (error is IOException or ObjectDisposedException) { }
     }
 
     private void AbandonProcess()

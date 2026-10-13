@@ -14,6 +14,7 @@ public partial class ExternalHistoryWindow : Window
     private bool _replaying;
     private int _refreshVersion;
     private int _selectionVersion;
+    private CancellationTokenSource? _refreshCancellation, _eventsCancellation, _replayCancellation;
     private ExternalHistoryEvent? _previewEvent;
     private string _previewSource = "current";
 
@@ -26,41 +27,59 @@ public partial class ExternalHistoryWindow : Window
         _folder = folder; _recovery = recovery; _canReplay = canReplay;
         if (!canReplay) HistoryHint.Text += " 当前保持连接，可查看记录；断开后可加载棋谱复盘。";
         Opened += async (_, _) => await RefreshAsync();
-        Closed += (_, _) => _closed = true;
+        Closed += (_, _) =>
+        {
+            _closed = true;
+            _refreshCancellation?.Cancel();
+            _eventsCancellation?.Cancel();
+            _replayCancellation?.Cancel();
+        };
     }
 
     private async Task RefreshAsync()
     {
+        if (_closed) return;
+        _refreshCancellation?.Cancel();
+        using var cancellation = new CancellationTokenSource();
+        _refreshCancellation = cancellation;
         var version = ++_refreshVersion;
         try
         {
             HistoryStatus.Text = "正在读取本机记录…";
-            var records = await ExternalHistoryStore.ListAsync(_folder, _recovery);
+            var records = await ExternalHistoryStore.ListAsync(_folder, _recovery, cancellation.Token);
             if (_closed || version != _refreshVersion) return;
             SessionsList.ItemsSource = records;
             HistoryStatus.Text = records.Count == 0 ? "尚无自动保存的接管记录。" : $"最近 {records.Count} 份记录 · 仅保存于本机";
             if (records.Count > 0) SessionsList.SelectedIndex = 0;
         }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
         catch (Exception error)
         { if (!_closed && version == _refreshVersion) HistoryStatus.Text = "读取记录失败：" + error.Message; }
+        finally { if (ReferenceEquals(_refreshCancellation, cancellation)) _refreshCancellation = null; }
     }
 
     private async void Session_Changed(object? sender, SelectionChangedEventArgs e)
     {
+        _eventsCancellation?.Cancel();
+        _replayCancellation?.Cancel();
         var version = ++_selectionVersion;
         ReplayButton.IsEnabled = _canReplay && !_replaying && SessionsList.SelectedItem is ExternalHistoryItem;
         EventsList.ItemsSource = null; EventDetails.Text = "";
         SetPreviewEvent(null);
-        if (SessionsList.SelectedItem is not ExternalHistoryItem item) return;
+        if (_closed || SessionsList.SelectedItem is not ExternalHistoryItem item) return;
+        using var cancellation = new CancellationTokenSource();
+        _eventsCancellation = cancellation;
         try
         {
-            var events = await ExternalHistoryStore.ReadEventsAsync(item.EventsPath);
+            var events = await ExternalHistoryStore.ReadEventsAsync(item.EventsPath, cancellation.Token);
             if (_closed || version != _selectionVersion) return;
             EventsList.ItemsSource = events;
             if (events.Count > 0) EventsList.SelectedIndex = events.Count - 1;
             else EventDetails.Text = "这份旧恢复记录只包含棋谱，没有当时的识别和发送事件。\n\n文件：" + item.RecordPath;
         }
-        catch (Exception error) { if (version == _selectionVersion) EventDetails.Text = "读取事件失败：" + error.Message; }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+        catch (Exception error) { if (!_closed && version == _selectionVersion) EventDetails.Text = "读取事件失败：" + error.Message; }
+        finally { if (ReferenceEquals(_eventsCancellation, cancellation)) _eventsCancellation = null; }
     }
 
     private void Event_Changed(object? sender, SelectionChangedEventArgs e)
@@ -148,17 +167,21 @@ public partial class ExternalHistoryWindow : Window
         if (!_canReplay || _replaying || SessionsList.SelectedItem is not ExternalHistoryItem item) return;
         _replaying = true;
         var version = _selectionVersion;
+        using var cancellation = new CancellationTokenSource();
+        _replayCancellation = cancellation;
         ReplayButton.IsEnabled = false;
         try
         {
             await using var stream = ExternalHistoryStore.OpenRecordRead(item.RecordPath);
-            var record = await GameRecordStorage.ReadValidatedAsync(stream, CancellationToken.None);
+            var record = await GameRecordStorage.ReadValidatedAsync(stream, cancellation.Token);
             if (!_closed && version == _selectionVersion) Close(record);
         }
-        catch (Exception error) { HistoryStatus.Text = "这份棋谱无法加载：" + error.Message; }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+        catch (Exception error) { if (!_closed && version == _selectionVersion) HistoryStatus.Text = "这份棋谱无法加载：" + error.Message; }
         finally
         {
             _replaying = false;
+            if (ReferenceEquals(_replayCancellation, cancellation)) _replayCancellation = null;
             if (!_closed) ReplayButton.IsEnabled = _canReplay && SessionsList.SelectedItem is ExternalHistoryItem;
         }
     }

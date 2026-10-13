@@ -8,6 +8,19 @@
 
 小修复可直接发 PR。将功能变更、依赖升级和大规模格式调整分别组织，便于审查及回退。
 
+## 提交身份
+
+GitHub 用提交中的邮箱关联作者；推送时登录哪个账号、仓库归谁所有，并不能代替提交身份。多账号开发时，请在本仓库设置自己的身份，避免误用全局配置：
+
+```bash
+git config --local user.name "你的显示名"
+git config --local user.email "你的已验证邮箱或 GitHub noreply 邮箱"
+git var GIT_AUTHOR_IDENT
+git var GIT_COMMITTER_IDENT
+```
+
+提交前检查上述两项；提交后用 `git show -s --format=fuller HEAD` 核对实际记录。不要使用维护者的身份代替自己的贡献身份。对已经推送的提交修改作者会改变提交 SHA，需要先协调分支、标签和其他协作者，不能直接强推公共历史。
+
 ## 开发与验证
 
 1. 安装 `global.json` 对应 SDK 和宿主原生构建工具。

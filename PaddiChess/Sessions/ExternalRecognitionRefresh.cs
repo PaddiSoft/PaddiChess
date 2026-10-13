@@ -102,13 +102,7 @@ public sealed class ExternalRecognitionRefresh(CancellationToken lifetime, TimeS
     }
 
     public static bool SameSamples(BoardObservation source, BoardObservation latest)
-    {
-        if (ReferenceEquals(source, latest)) return true;
-        if (source.Width != latest.Width || source.Height != latest.Height) return false;
-        for (var i = 0; i < source.Cells.Length; i++)
-            if (!source.Cells[i].AsSpan().SequenceEqual(latest.Cells[i])) return false;
-        return true;
-    }
+        => source.HasSameRecognitionSamples(latest);
 
     public async ValueTask DisposeAsync()
     {

@@ -36,13 +36,13 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           dotnet test PaddiChess.Tests/PaddiChess.Tests.csproj -c Release -r win-x64 --no-restore --filter "FullyQualifiedName~InferenceRuntimeTests|FullyQualifiedName~InferenceModelTests|FullyQualifiedName~BoardClassifierTests|FullyQualifiedName~VerificationStallTests|FullyQualifiedName~MarkerRecognitionTests|FullyQualifiedName~BorderVerificationTests|FullyQualifiedName~OcrResumeTests" --logger "trx;LogFileName=windows-recognition.trx" --results-directory artifacts/verification/windows
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-      - name: Verify takeover and owned Windows input
+      - name: Verify complete Windows regression and owned native input
         shell: pwsh
         env:
           PADDI_RECOGNITION_DEVICE: cpu
           PADDI_TEST_NATIVE_INPUT: '1'
         run: |
-          dotnet test PaddiChess.Tests/PaddiChess.Tests.csproj -c Release -r win-x64 --no-build --no-restore --filter "FullyQualifiedName~ExternalSessionTests|FullyQualifiedName~ExternalInput|FullyQualifiedName~ExternalClick|FullyQualifiedName~RecognitionRefreshTests|FullyQualifiedName~WindowsCaptureIntegrationTests|FullyQualifiedName~ManualPositionEvidenceTests|FullyQualifiedName~PositionEditor" --logger "trx;LogFileName=windows-takeover.trx" --results-directory artifacts/verification/windows
+          dotnet test PaddiChess.Tests/PaddiChess.Tests.csproj -c Release -r win-x64 --no-build --no-restore --logger "trx;LogFileName=windows-regression.trx" --results-directory artifacts/verification/windows
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         if: always()

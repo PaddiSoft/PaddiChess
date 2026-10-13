@@ -59,7 +59,7 @@ flowchart TD
 | `Sessions/ExternalRecognitionRefresh.cs` | 后台完整识别与请求身份 |
 | `External/ExternalDesktop.cs` | 平台接口与 macOS／Windows 后端 |
 | `External/ExternalPositionRecognizer.cs` | 象棋专用模型与局部 OCR 补识入口 |
-| `External/ExternalManualPosition.cs` | 用户明确采用的标签与原始字形、窗口、网格绑定；变化格不沿用 |
+| `External/ExternalManualPosition.cs` | 用户确认标签绑定原始字形、窗口和网格；变化格需与原始已核对类别重新比较 |
 | `External/ExternalMoveConfirmation.cs` | 稳定落点确认 |
 | `External/ExternalMoveRecovery.cs` | 近期错误匹配的恢复检查点 |
 | `Services/ExternalHistoryStore.cs` | 有界串行日志、原子棋谱快照与历史读取 |
@@ -132,7 +132,7 @@ UI 控件在 UI 线程访问；识别计算、文件 I/O 和独立引擎／网�
 
 结束会话先同步摘除旧 writer，再异步排空；重复结束共享排空任务，避免旧回调清掉新会话。读取棋谱的句柄允许原子替换，兼顾 Windows 文件共享规则。日志最后一行因崩溃不完整时，前面的有效事件仍可读取。
 
-UI 预览始终创建独立棋局，棋盘禁止输入并关闭动画。图像识别预览不将 FEN 轮次当作可靠外部轮次；异步会话读取、刷新和复盘使用版本检查，避免旧读取覆盖新选择。
+UI 预览始终创建独立棋局，棋盘禁止输入并关闭动画。图像识别预览不将 FEN 轮次当作可靠外部轮次；异步会话读取、刷新和复盘使用版本检查，避免旧读取覆盖新选择。切换、刷新或关闭时取消过时任务；JSONL 文件读取和解析在线程池执行，避免命中文件缓存后的连续同步完成阻塞 UI。
 
 ## 原生与平台边界
 

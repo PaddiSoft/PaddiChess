@@ -6,6 +6,29 @@ namespace PaddiXiangqi.Tests;
 
 public class RecognitionRefreshTests
 {
+    [Fact]
+    public async Task CachedFullReadChecksLiftedSamplesEvenWhenEveryCoreIsIdentical()
+    {
+        var game = new XiangqiGame();
+        var source = Frame(game);
+        source.PrepareLiftedCells([89]);
+        using var bitmap = SkiaSharp.SKBitmap.Decode(ExternalBoardTests.Render(game));
+        using var canvas = new SkiaSharp.SKCanvas(bitmap);
+        using var paint = new SkiaSharp.SKPaint { Color = SkiaSharp.SKColors.White };
+        canvas.DrawRect(434, 462, 12, 6, paint);
+        using var png = bitmap.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100);
+        var latest = BoardObservation.Read(png.ToArray(), new(40, 40, 440, 490, false));
+        for (var i = 0; i < 90; i++) Assert.Equal(source.Cells[i], latest.Cells[i]);
+        Assert.False(ExternalRecognitionRefresh.SameSamples(source, latest));
+        Assert.True(ExternalRecognitionRefresh.SameSamples(source, Frame(game)));
+        await using var refresh = new ExternalRecognitionRefresh(CancellationToken.None);
+        // An uncertain earlier read cannot use an identical core to masquerade
+        // as new evidence after its lifted recognition region has changed.
+        var read = new SkinRecognition(game.CurrentFen(), [new(8, 9)], .1, null);
+        refresh.Seed("history", null, source, read);
+        Assert.Null(refresh.Current("history", null, latest));
+    }
+
     private static BoardObservation Frame(XiangqiGame game) => BoardObservation.Read(
         ExternalBoardTests.Render(game), new(40, 40, 440, 490, false));
 

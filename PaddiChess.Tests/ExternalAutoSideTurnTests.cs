@@ -35,10 +35,9 @@ public class ExternalTurnInferenceTests
         Assert.Null(ExternalTurnInference.RunningClock(first, new(null, 789)));
     }
 
-    [Fact]
+    [MacClockFact]
     public async Task MacClockReaderFindsBothTimersInRealJjScreenshot()
     {
-        if (!OperatingSystem.IsMacOS()) return;
         var png = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "jj-wechat-midgame-1.png"));
         var geometry = BoardLocator.Locate(png)!;
         var clocks = await ExternalTurnInference.ReadClocksAsync(png, geometry, CancellationToken.None);

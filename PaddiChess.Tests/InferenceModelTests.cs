@@ -28,6 +28,30 @@ public class InferenceModelTests
     }
 
     [Fact]
+    public async Task CancelledQueuedInferenceDoesNotWaitForAnotherNativeRun()
+    {
+        using var entered = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var cpu = new Session(1) { OnRun = () =>
+        { entered.Set(); Assert.True(release.Wait(TimeSpan.FromSeconds(10))); } };
+        using var model = new InferenceModel("test", Shape, () => cpu, () => []);
+        var running = Task.Run(() => Read(model));
+        try
+        {
+            Assert.True(await Task.Run(() => entered.Wait(TimeSpan.FromSeconds(3))));
+            using var cancellation = new CancellationTokenSource();
+            var queued = Task.Run(() => Read(model, cancellation.Token));
+            cancellation.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => queued.WaitAsync(TimeSpan.FromSeconds(2)));
+            Assert.False(running.IsCompleted);
+            Assert.Equal(1, cpu.Runs);
+        }
+        finally { release.Set(); await running; }
+        cpu.OnRun = null;
+        Assert.Equal(1, Read(model)); // Cancellation did not dispose or replace the active device.
+    }
+
+    [Fact]
     public async Task CpuContinuesRecognizingWhileGpuCompilesAndOnlySwapsAfterWarmup()
     {
         using var entered = new ManualResetEventSlim(); using var release = new ManualResetEventSlim();

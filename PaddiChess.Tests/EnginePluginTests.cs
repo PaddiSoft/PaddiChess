@@ -15,10 +15,39 @@ namespace PaddiXiangqi.Tests;
 public class EnginePluginTests
 {
     private const BindingFlags Private = BindingFlags.NonPublic | BindingFlags.Instance;
-    [Fact]
+    [UnixEngineFact]
+    public async Task NoisyEngineBackpressuresOutputWithoutLosingBestMoveOrBlockingOnDiagnostics()
+    {
+        using var fixture = new FakeEngine(noisy: true);
+        await using var client = new PikafishClient { OverridePath = fixture.Executable };
+        using var release = new ManualResetEventSlim();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var progress = 0;
+        var search = Task.Run(() => client.SearchAsync(XiangqiGame.InitialFen, "",
+            new EngineSettings(20, 1, 16, 1, 1), _ =>
+            {
+                if (Interlocked.Increment(ref progress) != 1) return;
+                entered.TrySetResult();
+                Assert.True(release.Wait(TimeSpan.FromSeconds(10)));
+            }, timeout.Token));
+        try
+        {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var channel = (System.Threading.Channels.Channel<string>)typeof(PikafishClient)
+                .GetField("_lines", Private)!.GetValue(client)!;
+            for (var i = 0; i < 100 && channel.Reader.Count < 1024; i++) await Task.Delay(10);
+            Assert.Equal(1024, channel.Reader.Count);
+            Assert.False(search.IsCompleted);
+        }
+        finally { release.Set(); }
+        Assert.Equal("a3a4", (await search).BestMove);
+        Assert.Equal(4097, progress);
+    }
+
+    [UnixEngineFact]
     public async Task ReleasedEngineRestoresSkillWhenRestarted()
     {
-        if (OperatingSystem.IsWindows()) return;
         using var fixture = new FakeEngine();
         await using var client = new PikafishClient { OverridePath = fixture.Executable };
         var settings = new EngineSettings(7, 1, 16, 1, 1);
@@ -66,10 +95,9 @@ public class EnginePluginTests
         Assert.Equal(new[] { "chess", "xiangqi" }, variant.Variants);
         Assert.Equal("own version.nnue", UciEngineOption.Parse("option name EvalFile type string default own version.nnue")!.DefaultValue);
     }
-    [Fact]
+    [UnixEngineFact]
     public async Task ExternalEngineUsesOwnWeightsAndAdvertisedLimits()
     {
-        if (OperatingSystem.IsWindows()) return;
         using var fixture = new FakeEngine();
         await using var client = new PikafishClient { OverridePath = fixture.Executable };
         var result = await client.SearchAsync(XiangqiGame.InitialFen, "",
@@ -84,10 +112,9 @@ public class EnginePluginTests
         Assert.Contains("setoption name EvalFile value " + fixture.Weights, log);
         Assert.DoesNotContain(Path.Combine(AppContext.BaseDirectory, "Engine", "pikafish.nnue"), log);
     }
-    [Fact]
+    [UnixEngineFact]
     public async Task MinimalUciEngineIsNotSentPikafishOnlyOptionsOrWeights()
     {
-        if (OperatingSystem.IsWindows()) return;
         using var fixture = new FakeEngine(options: false);
         await using var client = new PikafishClient { OverridePath = fixture.Executable };
         var identity = await client.ProbeAsync(default);
@@ -96,10 +123,9 @@ public class EnginePluginTests
         Assert.Null(identity.EvalFile);
         Assert.DoesNotContain("setoption", File.ReadAllText(fixture.Log));
     }
-    [Fact]
+    [UnixEngineFact]
     public async Task PluginRulesAreAdvertisedValidatedAndAppliedBeforeSearching()
     {
-        if (OperatingSystem.IsWindows()) return;
         using var fixture = new FakeEngine(rules: true);
         var plugin = new EnginePlugin { ExecutablePath = fixture.Executable, RuleOptions = new()
         { ["Repetition Rule"] = "skyrule", ["Sixty Move Rule"] = "False", ["Rule60MaxPly"] = "130" } };
@@ -112,24 +138,22 @@ public class EnginePluginTests
             "setoption name Sixty Move Rule value false", "setoption name Rule60MaxPly value 130" })
             Assert.InRange(Array.IndexOf(log, command), 0, search - 1);
     }
-    [Theory]
+    [UnixEngineTheory]
     [InlineData("Repetition Rule", "UnknownRule")]
     [InlineData("Repetition Rule", "AsianRule\nquit")]
     [InlineData("Rule60MaxPly", "151")]
     [InlineData("Sixty Move Rule", "yes")]
     public async Task UnsupportedRuleValuesFailBeforeMoveSearch(string name, string value)
     {
-        if (OperatingSystem.IsWindows()) return;
         using var fixture = new FakeEngine(rules: true);
         await using var client = new PikafishClient { OverridePath = fixture.Executable,
             OverrideRuleOptions = new Dictionary<string, string> { [name] = value } };
         await Assert.ThrowsAsync<ArgumentException>(() => client.ProbeAsync(default));
         Assert.DoesNotContain("go ", File.ReadAllText(fixture.Log));
     }
-    [Fact]
+    [UnixEngineFact]
     public async Task RuleUiUsesDeclaredChoicesAndKeepsAnUnprobedManifest()
     {
-        if (OperatingSystem.IsWindows()) return;
         using var fixture = new FakeEngine(rules: true);
         await using var probe = new PikafishClient { OverridePath = fixture.Executable };
         var identity = await probe.ProbeAsync(default);
@@ -177,29 +201,26 @@ public class EnginePluginTests
             return true;
         }, default);
     }
-    [Fact]
+    [UnixEngineFact]
     public async Task ExplicitPluginWeightsAreKeptSeparateFromAutoDetectedWeights()
     {
-        if (OperatingSystem.IsWindows()) return;
         using var fixture = new FakeEngine();
         var chosen = Path.Combine(fixture.Folder, "selected.nnue"); File.WriteAllText(chosen, "selected weights");
         await using var client = new PikafishClient { OverridePath = fixture.Executable, OverrideEvalPath = chosen };
         Assert.Equal(chosen, (await client.ProbeAsync(default)).EvalFile);
         Assert.Contains("setoption name EvalFile value " + chosen, File.ReadAllText(fixture.Log));
     }
-    [Fact]
+    [UnixEngineFact]
     public async Task PluginDeclaringOnlyChessIsRejectedBeforeAnyMoveSearch()
     {
-        if (OperatingSystem.IsWindows()) return;
         using var fixture = new FakeEngine(xiangqi: false);
         await using var client = new PikafishClient { OverridePath = fixture.Executable };
         await Assert.ThrowsAsync<NotSupportedException>(() => client.ProbeAsync(default));
         Assert.DoesNotContain("go ", File.ReadAllText(fixture.Log));
     }
-    [Fact]
+    [UnixEngineFact]
     public async Task SelectingPluginDoesNotSwitchUntilDefaultIsAppliedAndPersistsWeights()
     {
-        if (OperatingSystem.IsWindows()) return;
         using var fixture = new FakeEngine();
         await ExternalSessionTests.Session.Dispatch(async () =>
         {
@@ -368,7 +389,7 @@ public class EnginePluginTests
         public string Executable => Path.Combine(Folder, "fixture-engine.py");
         public string Weights => Path.Combine(Folder, "own version.nnue");
         public string Log => Path.Combine(Folder, "uci.log");
-        public FakeEngine(bool options = true, bool xiangqi = true, bool rules = false)
+        public FakeEngine(bool options = true, bool xiangqi = true, bool rules = false, bool noisy = false)
         {
             Directory.CreateDirectory(Folder); File.WriteAllText(Weights, "fixture own weights");
             File.WriteAllText(Executable, $$"""
@@ -393,6 +414,10 @@ public class EnginePluginTests
                             print('uciok',flush=True)
                         elif command=='isready': print('readyok',flush=True)
                         elif command.startswith('go '):
+                            if {{(noisy ? "True" : "False")}}:
+                                sys.stderr.write('diagnostic' * 100000); sys.stderr.flush()
+                                for index in range(4096):
+                                    print('info depth 1 score cp 0 nodes 1 pv a3a4')
                             print('info depth 1 score cp 0 nodes 1 pv a3a4')
                             print('bestmove a3a4',flush=True)
                         elif command=='quit': break

@@ -58,12 +58,9 @@ public class PikafishTests
     [Fact]
     public async Task BundledEngine_ReturnsLegalMoveFromInitialPosition()
     {
-        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../"));
-        var engineFolder = Path.Combine(root, "Pikafish.2026-09-25");
-        var binary = OperatingSystem.IsMacOS() ? "Pikafish-MacOS-universal"
-            : OperatingSystem.IsWindows() ? "Pikafish-Windows-x86-64-universal.exe"
-            : "Pikafish-Linux-x86-64-universal";
-        if (!File.Exists(Path.Combine(engineFolder, binary))) return;
+        var binary = Path.GetFileName(PikafishClient.BundledEnginePath());
+        var engineFolder = Path.Combine(AppContext.BaseDirectory, "Engine");
+        Assert.True(File.Exists(Path.Combine(engineFolder, binary)), "Required bundled engine is missing");
         await using var engine = new PikafishClient
         {
             OverridePath = Path.Combine(engineFolder, binary),
@@ -106,12 +103,9 @@ public class PikafishTests
     [Fact]
     public async Task BundledEngine_RespectsAllowedRootMoves()
     {
-        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../"));
-        var engineFolder = Path.Combine(root, "Pikafish.2026-09-25");
-        var binary = OperatingSystem.IsMacOS() ? "Pikafish-MacOS-universal"
-            : OperatingSystem.IsWindows() ? "Pikafish-Windows-x86-64-universal.exe"
-            : "Pikafish-Linux-x86-64-universal";
-        if (!File.Exists(Path.Combine(engineFolder, binary))) return;
+        var binary = Path.GetFileName(PikafishClient.BundledEnginePath());
+        var engineFolder = Path.Combine(AppContext.BaseDirectory, "Engine");
+        Assert.True(File.Exists(Path.Combine(engineFolder, binary)), "Required bundled engine is missing");
 
         var game = new XiangqiGame();
         const string permittedMove = "a3a4";
@@ -143,12 +137,9 @@ public class PikafishTests
     [Fact]
     public async Task Engine_ReusesProcessAndSkipsReadyHandshakeWhenConfigurationIsUnchanged()
     {
-        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../"));
-        var binary = OperatingSystem.IsMacOS() ? "Pikafish-MacOS-universal"
-            : OperatingSystem.IsWindows() ? "Pikafish-Windows-x86-64-universal.exe"
-            : "Pikafish-Linux-x86-64-universal";
-        var folder = Path.Combine(root, "Pikafish.2026-09-25");
-        if (!File.Exists(Path.Combine(folder, binary))) return;
+        var binary = Path.GetFileName(PikafishClient.BundledEnginePath());
+        var folder = Path.Combine(AppContext.BaseDirectory, "Engine");
+        Assert.True(File.Exists(Path.Combine(folder, binary)), "Required bundled engine is missing");
         await using var engine = new PikafishClient
         {
             OverridePath = Path.Combine(folder, binary),
@@ -175,12 +166,9 @@ public class PikafishTests
     [Fact]
     public async Task Benchmark_ReportsNpsWithoutChangingTheLiveEngineSession()
     {
-        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../"));
-        var binary = OperatingSystem.IsMacOS() ? "Pikafish-MacOS-universal"
-            : OperatingSystem.IsWindows() ? "Pikafish-Windows-x86-64-universal.exe"
-            : "Pikafish-Linux-x86-64-universal";
-        var folder = Path.Combine(root, "Pikafish.2026-09-25");
-        if (!File.Exists(Path.Combine(folder, binary))) return;
+        var binary = Path.GetFileName(PikafishClient.BundledEnginePath());
+        var folder = Path.Combine(AppContext.BaseDirectory, "Engine");
+        Assert.True(File.Exists(Path.Combine(folder, binary)), "Required bundled engine is missing");
         await using var engine = new PikafishClient
         {
             OverridePath = Path.Combine(folder, binary),

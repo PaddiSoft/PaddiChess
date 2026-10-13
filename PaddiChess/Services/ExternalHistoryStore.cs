@@ -134,7 +134,8 @@ public sealed class ExternalHistoryStore : IAsyncDisposable
         }
     }
 
-    public static Task<IReadOnlyList<ExternalHistoryItem>> ListAsync(string root, string? recovery = null) => Task.Run(async () =>
+    public static Task<IReadOnlyList<ExternalHistoryItem>> ListAsync(string root, string? recovery = null,
+        CancellationToken ct = default) => Task.Run(async () =>
     {
         var paths = Directory.Exists(root)
             ? Directory.EnumerateDirectories(root).Select(folder => Path.Combine(folder, "game.paddi.json"))
@@ -142,13 +143,17 @@ public sealed class ExternalHistoryStore : IAsyncDisposable
         if (recovery is not null && Directory.Exists(recovery))
             paths = paths.Concat(Directory.EnumerateFiles(recovery, "*.paddi.json"));
         var result = new List<ExternalHistoryItem>();
-        foreach (var path in paths.Where(File.Exists).OrderByDescending(File.GetLastWriteTime).Take(500))
+        var candidates = paths.Select(path => { ct.ThrowIfCancellationRequested(); return new FileInfo(path); })
+            .Where(file => file.Exists).OrderByDescending(file => file.LastWriteTime).Take(500);
+        foreach (var file in candidates)
         {
+            ct.ThrowIfCancellationRequested();
+            var path = file.FullName;
             try
             {
                 await using var stream = OpenRecordRead(path);
                 // Listing does not need to materialize potentially long model responses.
-                var record = await JsonSerializer.DeserializeAsync<RecordSummary>(stream).ConfigureAwait(false);
+                var record = await JsonSerializer.DeserializeAsync<RecordSummary>(stream, cancellationToken: ct).ConfigureAwait(false);
                 if (record is null || record.Format != "PaddiXiangqi/1") continue;
                 var events = Path.Combine(Path.GetDirectoryName(path)!, "history.jsonl");
                 var isRecovery = !File.Exists(events);
@@ -158,21 +163,24 @@ public sealed class ExternalHistoryStore : IAsyncDisposable
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException) { }
         }
         return (IReadOnlyList<ExternalHistoryItem>)result;
-    });
+    }, ct);
 
     // Windows requires readers to permit deletion/rename while the writer commits
     // a replacement. The open handle keeps reading its complete original snapshot.
     public static FileStream OpenRecordRead(string path) => new(path, FileMode.Open, FileAccess.Read,
         FileShare.Read | FileShare.Delete, 16_384, FileOptions.Asynchronous);
 
-    public static async Task<IReadOnlyList<ExternalHistoryEvent>> ReadEventsAsync(string? path)
+    public static Task<IReadOnlyList<ExternalHistoryEvent>> ReadEventsAsync(string? path,
+        CancellationToken ct = default) => Task.Run(async () =>
     {
-        if (path is null) return [];
+        ct.ThrowIfCancellationRequested();
+        if (path is null) return (IReadOnlyList<ExternalHistoryEvent>)Array.Empty<ExternalHistoryEvent>();
         var events = new List<ExternalHistoryEvent>();
         using var reader = new StreamReader(new FileStream(path, FileMode.Open, FileAccess.Read,
             FileShare.ReadWrite, 16_384, FileOptions.Asynchronous));
-        while (await reader.ReadLineAsync().ConfigureAwait(false) is { } line)
+        while (await reader.ReadLineAsync(ct).ConfigureAwait(false) is { } line)
         {
+            ct.ThrowIfCancellationRequested();
             try
             {
                 if (JsonSerializer.Deserialize<ExternalHistoryEvent>(line) is { } entry)
@@ -180,6 +188,6 @@ public sealed class ExternalHistoryStore : IAsyncDisposable
             }
             catch (JsonException) { } // A crash can leave the final JSONL line incomplete.
         }
-        return events;
-    }
+        return (IReadOnlyList<ExternalHistoryEvent>)events;
+    }, ct);
 }

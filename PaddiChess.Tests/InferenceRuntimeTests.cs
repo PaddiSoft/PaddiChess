@@ -5,10 +5,10 @@ namespace PaddiXiangqi.Tests;
 
 public class InferenceRuntimeTests
 {
-    [Fact]
+    [WindowsRuntimeFact]
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public void WindowsDistributionIncludesDirectMlAndCanEnumerateProvidersWithoutAGpu()
     {
-        if (!OperatingSystem.IsWindows()) return;
         foreach (var name in new[] { "onnxruntime.dll", "DirectML.dll", "Microsoft.Windows.AI.MachineLearning.dll" })
             Assert.True(File.Exists(Path.Combine(AppContext.BaseDirectory, name)), name);
         var providers = OrtEnv.Instance().GetAvailableProviders();

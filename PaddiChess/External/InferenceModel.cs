@@ -19,7 +19,7 @@ internal sealed record InferenceBackend(string Name, Func<IRecognitionSession> C
 /// has one session, one preparation attempt, and a permanent CPU fallback on device failure.</summary>
 internal sealed class InferenceModel : IDisposable
 {
-    private readonly object _gate = new();
+    private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly string _name;
     private readonly int[] _shape;
     private readonly Func<IRecognitionSession> _cpu;
@@ -49,11 +49,13 @@ internal sealed class InferenceModel : IDisposable
 
     internal Task PrepareAsync()
     {
-        lock (_gate)
+        _gate.Wait();
+        try
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             return _preparation ??= Task.Run(PrepareCoreAsync);
         }
+        finally { _gate.Release(); }
     }
 
     private async Task PrepareCoreAsync()
@@ -61,23 +63,29 @@ internal sealed class InferenceModel : IDisposable
         await RecognitionAcceleration.PreparationGate.WaitAsync().ConfigureAwait(false);
         try
         {
-            lock (_gate) { if (_disposed) return; }
+            _gate.Wait();
+            try { if (_disposed) return; }
+            finally { _gate.Release(); }
             _report(new(_name, "CPU · 准备加速", "首次编译在后台完成，期间仍可识别。", true));
             var failures = new List<string>();
             foreach (var backend in _accelerators())
             {
-                lock (_gate) { if (_disposed) return; }
+                _gate.Wait();
+                try { if (_disposed) return; }
+                finally { _gate.Release(); }
                 IRecognitionSession? candidate = null;
                 try
                 {
                     candidate = backend.Create();
                     candidate.WarmUp(_shape); // Confirms at least one device kernel actually ran.
-                    lock (_gate)
+                    _gate.Wait();
+                    try
                     {
                         if (_disposed) return;
                         _active.Dispose(); _active = candidate; candidate = null; _hardware = true;
                         _report(new(_name, backend.Name, "已预热；不支持的算子由 CPU 执行，设备故障自动回退。"));
                     }
+                    finally { _gate.Release(); }
                     return;
                 }
                 catch (Exception ex) when (IsBackendFailure(ex)) { failures.Add($"{backend.Name}：{ex.GetType().Name}"); }
@@ -94,7 +102,11 @@ internal sealed class InferenceModel : IDisposable
 
     internal T Run<T>(DenseTensor<float> input, Func<Tensor<float>, T> read, CancellationToken ct)
     {
-        lock (_gate)
+        // A cancelled verification must leave the queue even while another
+        // caller is inside a slow native inference. A monitor lock could only
+        // check cancellation after that other inference had finished.
+        _gate.Wait(ct);
+        try
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             ct.ThrowIfCancellationRequested();
@@ -110,6 +122,7 @@ internal sealed class InferenceModel : IDisposable
                 return _active.Run(input, read, ct);
             }
         }
+        finally { _gate.Release(); }
     }
 
     internal static bool IsBackendFailure(Exception ex) => ex is OnnxRuntimeException or DllNotFoundException or
@@ -120,6 +133,8 @@ internal sealed class InferenceModel : IDisposable
 
     public void Dispose()
     {
-        lock (_gate) { if (_disposed) return; _disposed = true; _active.Dispose(); }
+        _gate.Wait();
+        try { if (_disposed) return; _disposed = true; _active.Dispose(); }
+        finally { _gate.Release(); }
     }
 }

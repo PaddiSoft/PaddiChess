@@ -20,5 +20,6 @@
 - [开发指南](development.md)：资源、构建、完整验证、打包与平台限制。
 - [参与贡献](../CONTRIBUTING.md)：修改范围、测试、资源许可和提交说明。
 - [安全报告](../SECURITY.md)：私密报告渠道及报告内容。
+- [2026-10-13 工程检查](audit-2026-10-13.md)：已修复问题、测试覆盖与仍需改进的范围。
 
 文档描述当前仓库代码。发行版的实际附件、签名状态、验证结果及已知问题以该版本 [Release](https://github.com/PaddiSoft/PaddiChess/releases) 为准。

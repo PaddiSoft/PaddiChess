@@ -69,6 +69,21 @@ public sealed class BoardObservation
     internal float[][] LiftedCell(int index) => _liftedCells[index] ?? throw new InvalidOperationException("尚未读取棋子上浮样本");
     internal bool HasLiftedCell(int index) => _liftedCells[index] != null;
 
+    /// <summary>Exact equality of the core and every lifted sample already used by this observation.</summary>
+    public bool HasSameRecognitionSamples(BoardObservation latest)
+    {
+        if (ReferenceEquals(this, latest)) return true;
+        if (Width != latest.Width || Height != latest.Height || _calibration != latest._calibration) return false;
+        for (var i = 0; i < Cells.Length; i++)
+            if (!Cells[i].AsSpan().SequenceEqual(latest.Cells[i])) return false;
+        var lifted = Enumerable.Range(0, Cells.Length).Where(HasLiftedCell).ToArray();
+        latest.PrepareLiftedCells(lifted);
+        foreach (var i in lifted)
+            for (var variant = 0; variant < LiftedCell(i).Length; variant++)
+                if (!LiftedCell(i)[variant].AsSpan().SequenceEqual(latest.LiftedCell(i)[variant])) return false;
+        return true;
+    }
+
     private static float[][][] ReadPatches(byte[]? png, BoardCalibration calibration, bool includeLifted, out int width, out int height,
         IReadOnlyCollection<int>? indices = null, BoardObservation? previous = null, CapturedPixels? rawPixels = null)
     {
