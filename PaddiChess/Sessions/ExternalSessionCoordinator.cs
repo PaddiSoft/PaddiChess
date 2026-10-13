@@ -122,12 +122,8 @@ public sealed class ExternalSessionCoordinator<TDecision, TConfiguration> : IAsy
             var read = await Task.Run(() => Verification.Current(identity, null, frame.Observation), ct);
             if (read is not { Confident: true })
             {
-                Verification.TryStart(identity, null, frame.Observation, now, async token =>
-                {
-                    var clock = Stopwatch.StartNew();
-                    try { return await recognize(frame, token).ConfigureAwait(false); }
-                    finally { Metrics.Record("full-recognition", clock.Elapsed.TotalMilliseconds); }
-                });
+                Verification.TryStart(identity, null, frame.Observation, now,
+                    token => RecognizeAsync(inner => recognize(frame, inner), token));
                 var reason = read is { Uncertain.Count: > 0 } ? $"正在核验 {read.Uncertain.Count} 个不确定位置"
                     : read?.Problem ?? Verification.LastFailure ?? "正在核验最新棋盘";
                 return new(frame, read, null, reason);
@@ -152,6 +148,12 @@ public sealed class ExternalSessionCoordinator<TDecision, TConfiguration> : IAsy
     {
         if (enabled && !_armed) _armedAt = Stopwatch.GetTimestamp();
         _armed = enabled;
+    }
+    public async Task<SkinRecognition?> RecognizeAsync(Func<CancellationToken, Task<SkinRecognition?>> recognize, CancellationToken ct)
+    {
+        var clock = Stopwatch.StartNew();
+        try { return await recognize(ct).ConfigureAwait(false); }
+        finally { Metrics.Record("full-recognition", clock.Elapsed.TotalMilliseconds); }
     }
     public void InputSubmitted()
     {

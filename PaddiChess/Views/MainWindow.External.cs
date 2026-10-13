@@ -636,7 +636,8 @@ public partial class MainWindow
                         var redToMove = _game.RedToMove;
                         var recognitionGeometry = calibration;
                         recognitionRefresh.TryStart(recognitionIdentity, pending, observation, sessionClock.Elapsed,
-                            token => ReadVerifiedExternalPositionAsync(frame, recognitionGeometry, redToMove, token, false, skin, customPath));
+                            token => coordinator.RecognizeAsync(inner => ReadVerifiedExternalPositionAsync(frame,
+                                recognitionGeometry, redToMove, inner, false, skin, customPath), token));
                     }
                     ShowExternalRecovery(recognitionRefresh.IsRunning
                         ? "正在后台重新识别棋子，连接和棋谱已保留；核验合法着法后自动继续。"
@@ -754,8 +755,8 @@ public partial class MainWindow
                     var readySkin = _externalSessionSkin;
                     var readyPath = (ExternalSkinBox.SelectedItem as SkinChoice)?.Path;
                     inputVerification.TryStart(readyIdentity, null, observation, sessionClock.Elapsed,
-                        token => ReadVerifiedExternalPositionAsync(frame, readyGeometry, readyTurn,
-                            token, false, readySkin, readyPath));
+                        token => coordinator.RecognizeAsync(inner => ReadVerifiedExternalPositionAsync(frame, readyGeometry, readyTurn,
+                            inner, false, readySkin, readyPath), token));
                 }
                 if (coordinator.Decision == null && _externalPreparedDecision is { } prepared)
                 {

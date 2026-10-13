@@ -7,8 +7,9 @@ from pathlib import Path
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--output', required=True)
+parser.add_argument('--project', default='PaddiChess.slnx')
 args = parser.parse_args()
-result = subprocess.run(['dotnet', 'list', 'PaddiChess.slnx', 'package', '--vulnerable',
+result = subprocess.run(['dotnet', 'list', args.project, 'package', '--vulnerable',
                          '--include-transitive', '--format', 'json', '--no-restore'],
                         text=True, capture_output=True)
 if result.returncode: raise SystemExit('NuGet audit command failed; inspect the dependency source connection.')

@@ -29,6 +29,11 @@ public static class X11DesktopWorker
         public int ByteOrder,Unit,BitOrder,Pad,Depth,RowBytes,Bits;
         public nuint Red,Green,Blue;
     }
+    [StructLayout(LayoutKind.Sequential)] private struct Visual
+    {
+        public nint Extension; public nuint Id; public int Class;
+        public nuint Red,Green,Blue; public int BitsPerRgb,MapEntries;
+    }
     [DllImport(X11)] private static extern nint XOpenDisplay(nint name);
     [DllImport(X11)] private static extern int XCloseDisplay(nint display);
     [DllImport(X11)] private static extern nuint XDefaultRootWindow(nint display);
@@ -110,7 +115,13 @@ public static class X11DesktopWorker
             image = XGetImage(d, pixmap, a.Border, a.Border, (uint)w.Width, (uint)w.Height, nuint.MaxValue, 2);
             if (image == 0 || _error != 0) throw new IOException("无法读取窗口像素");
             var data = Marshal.PtrToStructure<XImage>(image);
-            if (data.Bits != 32 || data.ByteOrder != 0 || data.Red != 0xff0000 || data.Green != 0xff00 || data.Blue != 0xff)
+            // XGetImage on a named pixmap may leave image color masks unset.
+            // Its pixels use the source window's visual, unlike a window image
+            // where Xlib fills those masks directly.
+            var visual = Marshal.PtrToStructure<Visual>(a.Visual);
+            if (data.Red == 0 && data.Green == 0 && data.Blue == 0)
+            { data.Red = visual.Red; data.Green = visual.Green; data.Blue = visual.Blue; }
+            if (visual.Class != 4 || data.Bits != 32 || data.ByteOrder != 0 || data.Red != 0xff0000 || data.Green != 0xff00 || data.Blue != 0xff)
                 throw new NotSupportedException("X11 捕获要求 24/32 位 TrueColor 显示模式");
             var length = checked(data.RowBytes * data.Height);
             if (length <= 0 || length > 268435456) throw new IOException("窗口图像过大");
