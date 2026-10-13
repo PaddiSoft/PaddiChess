@@ -6,6 +6,34 @@ namespace PaddiXiangqi.Tests;
 public class OcrResumeTests
 {
     [Fact]
+    public async Task ExpiredSupplementBudgetYieldsAfterACompleteBatchInsteadOfRestartingItForever()
+    {
+        var png = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "pawn-rook-correction.png"));
+        var pixels = CapturedPixels.DecodePng(png);
+        var grid = BoardLocator.Locate(png)! with { RedAtTop = false };
+        var cache = new LocalGlyphOcr.InputCache();
+        int[] indices = [86, 87, 89];
+        LocalGlyphOcr.ReadResult? read = null;
+        int batches = 0;
+        for (var attempt = 0; attempt < 40; attempt++)
+        {
+            // A zero soft budget deterministically models any batch taking longer
+            // than its budget, without relying on a CI machine's inference speed.
+            read = await LocalGlyphOcr.ReadCellsAsync(pixels, grid, indices, default, cache, TimeSpan.Zero);
+            Assert.InRange(read.Batches, 0, 1);
+            batches += read.Batches;
+            if (indices.All(i => LocalGlyphOcr.IsReliable(read.Glyphs[i]))) break;
+        }
+        Assert.NotNull(read);
+        Assert.True(batches > 1);
+        Assert.All(indices, i => Assert.True(LocalGlyphOcr.IsReliable(read.Glyphs[i])));
+        Assert.Equal("卒", read.Glyphs[89].Text);
+        var completed = await LocalGlyphOcr.ReadCellsAsync(pixels, grid, indices, default, cache);
+        Assert.Equal(0, completed.Batches);
+        Assert.Equal(read.Glyphs, completed.Glyphs);
+    }
+
+    [Fact]
     public async Task RetryReusesCompletedGlyphViewsEvenAfterAnInterveningCancellation()
     {
         var png = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "pawn-rook-correction.png"));

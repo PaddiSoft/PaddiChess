@@ -78,17 +78,17 @@ public static class LocalGlyphOcr
         => await ReadCellsAsync(pixels, geometry, displayIndices, ct, null).ConfigureAwait(false);
 
     internal static async Task<ReadResult> ReadCellsAsync(CapturedPixels pixels, BoardCalibration geometry,
-        IReadOnlyCollection<int> displayIndices, CancellationToken ct, InputCache? cache)
+        IReadOnlyCollection<int> displayIndices, CancellationToken ct, InputCache? cache, TimeSpan? budget = null)
     {
         var requested = displayIndices.ToHashSet();
         if (requested.Any(i => i is < 0 or >= 90)) throw new ArgumentOutOfRangeException(nameof(displayIndices));
         await Gate.WaitAsync(ct).ConfigureAwait(false);
-        try { return await Task.Run(() => Read(pixels, geometry, ct, requested, cache), ct).ConfigureAwait(false); }
+        try { return await Task.Run(() => Read(pixels, geometry, ct, requested, cache, budget), ct).ConfigureAwait(false); }
         finally { Gate.Release(); }
     }
 
     private static ReadResult Read(CapturedPixels pixels, BoardCalibration geometry, CancellationToken ct,
-        HashSet<int>? requested = null, InputCache? cache = null)
+        HashSet<int>? requested = null, InputCache? cache = null, TimeSpan? budget = null)
     {
         var timer = Stopwatch.StartNew();
         ct.ThrowIfCancellationRequested();
@@ -105,6 +105,9 @@ public static class LocalGlyphOcr
         // different colour, stroke, highlight or animation still receives its own OCR.
         cache ??= new InputCache();
         int inferenceCells = 0, reusedCells = 0, batches = 0;
+        bool BudgetSpent() => budget is { } limit && batches > 0 && timer.Elapsed >= limit;
+        ReadResult Finish() => new(results, inferenceCells, reusedCells, batches, timer.Elapsed.TotalMilliseconds)
+            { ModelLoadMs = modelLoadMs, NativeInferenceMs = nativeInferenceMs };
         var discRays = Enumerable.Range(0, 90).Select(i => PieceSilhouette.DiscRays(pixels, geometry, i)).ToArray();
         // Some OCR dictionaries omit rare Xiangqi variants such as 俥. For an
         // unresolved visible disc, recognize the 車/馬 component to the right
@@ -123,10 +126,14 @@ public static class LocalGlyphOcr
                 if (variant < 21 && variant % 7 is 4 or 5 && glyph.Text is not ("車" or "车" or "馬" or "马")) return;
                 if (glyph.Confidence > results[index].Confidence) results[index] = glyph;
             }
-            void Flush()
+            bool Flush()
             {
-                if (pending.Count == 0) return;
+                if (pending.Count == 0) return true;
                 ct.ThrowIfCancellationRequested();
+                // Make at least one completed batch of progress even if preparation
+                // or a slow accelerator already consumed the scheduling budget.
+                // Explicit caller cancellation remains a hard cancellation.
+                if (BudgetSpent()) return false;
                 var batch = pending.ToArray();
                 // The device session pads GPU batches for static compilation. CPU
                 // inference only processes real rows; padding is never decoded.
@@ -161,6 +168,7 @@ public static class LocalGlyphOcr
                     return 0;
                 }, ct);
                 pending.Clear();
+                return true;
             }
             foreach (int index in indices)
             {
@@ -177,13 +185,12 @@ public static class LocalGlyphOcr
                     // Even a hash collision may never share a prediction.
                     while (pending.ContainsKey(key)) key += "_";
                     pending.Add(key, new(input, [index]));
-                    if (pending.Count == 8) Flush();
+                    if (pending.Count == 8 && !Flush()) return Finish();
                 }
             }
-            Flush();
+            if (!Flush() || BudgetSpent()) return Finish();
         }
-        return new(results, inferenceCells, reusedCells, batches, timer.Elapsed.TotalMilliseconds)
-        { ModelLoadMs = modelLoadMs, NativeInferenceMs = nativeInferenceMs };
+        return Finish();
     }
 
     public static bool IsReliable(Glyph glyph) => glyph.Confidence >= .80 && glyph.Text.Length == 1 &&

@@ -28,16 +28,17 @@ public sealed class ExternalPositionRecognizer : IExternalPositionRecognizer
         var read = prediction.ToRecognition(redToMove, detectOrientation);
         if (read.Confident || read.Uncertain.Count == 0 || read.Uncertain.Count > 12) return read;
         var selectedGeometry = geometry with { RedAtTop = prediction.RedAtTop };
-        using var supplement = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        supplement.CancelAfter(TimeSpan.FromMilliseconds(800));
         try
         {
             var indices = read.Uncertain.Select(s => prediction.RedAtTop ? 89 - s.Rank * 9 - s.File : s.Rank * 9 + s.File).ToArray();
-            var ocr = await LocalGlyphOcr.ReadCellsAsync(pixels, selectedGeometry, indices, supplement.Token, _ocrCache).ConfigureAwait(false);
+            // Yield between completed batches. Cancelling a native batch every
+            // 800 ms can discard the very same glyph forever on a slower device.
+            // Session/verification cancellation still interrupts in-flight work.
+            var ocr = await LocalGlyphOcr.ReadCellsAsync(pixels, selectedGeometry, indices, ct, _ocrCache,
+                TimeSpan.FromMilliseconds(800)).ConfigureAwait(false);
             return await Task.Run(() => Supplement(pixels, selectedGeometry, prediction, read, ocr.Glyphs,
                 redToMove, detectOrientation), ct).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { return read; }
         catch (Exception ex) when (ex is IOException or OnnxRuntimeException) { return read; }
     }
 
