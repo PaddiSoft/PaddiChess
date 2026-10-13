@@ -1,0 +1,3 @@
+# These are verbatim upstream documents with recorded byte-level SHA-256.
+# Windows core.autocrlf must not rewrite their original line endings.
+PaddiChess/Packaging/ThirdParty/** -text
