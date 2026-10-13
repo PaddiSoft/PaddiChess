@@ -40,12 +40,23 @@ package_mac() (
     rm "$staging/signing-probe"
   fi
   local app="$staging/$(basename "$destination")"
+  local version
+  version="$(dotnet msbuild "$PROJECT" -p:Configuration=Release -p:RuntimeIdentifier="$rid" -getProperty:Version)"
   dotnet publish "$PROJECT" -p:RestoreLockedMode=true -c Release -r "$rid" --self-contained true -o "$app/Contents/MacOS"
   mkdir -p "$app/Contents/Resources"
   # Notices are resources, not nested code bundles. Versioned NuGet directory
   # names under MacOS are otherwise interpreted as bundles by codesign --deep.
   mv "$app/Contents/MacOS/Licenses" "$app/Contents/Resources/Licenses"
-  cp "$PACKAGING/Info.plist" "$app/Contents/Info.plist"
+  # Generate bundle metadata from the same MSBuild version as the executable.
+  python3 - "$PACKAGING/Info.plist" "$app/Contents/Info.plist" "$version" <<'PY'
+import pathlib, plistlib, re, sys
+source, destination, version = sys.argv[1:]
+if not re.fullmatch(r'\d+\.\d+\.\d+', version):
+    raise ValueError('macOS bundle requires a three-part release version: ' + version)
+metadata = plistlib.loads(pathlib.Path(source).read_bytes())
+metadata['CFBundleVersion'] = metadata['CFBundleShortVersionString'] = version
+pathlib.Path(destination).write_bytes(plistlib.dumps(metadata, sort_keys=False))
+PY
   cp "$PACKAGING/Paddi.icns" "$app/Contents/Resources/Paddi.icns"
   codesign --force --identifier com.paddi.xiangqi.bridge --sign "$SIGNING_IDENTITY" "$app/Contents/MacOS/Native/PaddiBridge"
   codesign --force --identifier com.paddi.xiangqi.rules --sign "$SIGNING_IDENTITY" "$app/Contents/MacOS/Native/PaddiRules"

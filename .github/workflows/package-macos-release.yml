@@ -59,9 +59,12 @@ jobs:
           python3 scripts/audit-publication.py
           PADDI_DIST_DIR="$GITHUB_WORKSPACE/dist/release-macos" bash PaddiChess/Packaging/package.sh arm
           python3 - <<'PY'
-          import json, os, pathlib, re, runpy
+          import json, os, pathlib, plistlib, re, runpy
           audit = runpy.run_path('scripts/audit-publication.py')['audit']
           bundle = pathlib.Path('dist/release-macos/Paddi象棋.app')
+          metadata = plistlib.loads((bundle / 'Contents/Info.plist').read_bytes())
+          version = os.environ['RELEASE_TAG'].removeprefix('v')
+          assert metadata['CFBundleVersion'] == metadata['CFBundleShortVersionString'] == version, 'Bundle version must match release tag'
           report = audit(pathlib.Path.cwd(), bundle)
           # Upstream libraries were also built by a GitHub user named runner.
           # That collides with this runner's home. Downgrade only exact path
