@@ -16,11 +16,8 @@ public static class RecognitionAcceleration
     // Open starts accelerator preparation without waiting for it. The worker
     // handshake only waits for CPU sessions, keeping cold GPU compilation
     // out of the pipe and first connected-board read.
-    internal static Task EnsureReadyAsync() => Task.Run(() =>
-    {
-        LocalBoardClassifier.EnsureReady();
-        LocalGlyphOcr.EnsureReady();
-    });
+    internal static Task EnsureReadyAsync() => Task.WhenAll(
+        Task.Run(LocalBoardClassifier.EnsureReady), Task.Run(LocalGlyphOcr.EnsureReady));
 
     // Start at the first visit to external takeover. Compilation remains off the UI
     // thread and a ready CPU session serves recognition until the accelerator is warm.

@@ -35,6 +35,17 @@ public partial class MainWindow
         {
             await PauseExternalObservationForSetupAsync();
             if (_closing) return false;
+            // Process/NNUE/hash preparation overlaps capture, localization and OCR.
+            // Do not clear the same hash again when observation begins.
+            if (ExternalControllerBox.SelectedIndex != 1)
+            {
+                var engine = await GetExternalPlayingEngineAsync();
+                if (!_externalLinked || _externalCompleted)
+                { engine.RequestNewGame(); _externalPreparedNewGameEngine = engine; }
+                var settings = ReadPlayingEngineSettings();
+                CancelSearch(); StopLlmInsightWorker(); _enginePaused = true;
+                _externalConnectionWarmup = PrepareConnectionEngineAsync(engine, settings, _externalPermissionLifetime.Token);
+            }
             // A manual correction applies to its game only. New games and new
             // targets must re-infer turn/orientation instead of inheriting it.
             var newGame = _externalCompleted || (!useCurrentTarget &&
@@ -82,6 +93,19 @@ public partial class MainWindow
         catch (Exception ex) { ExternalStatusText.Text = "同步未完成：" + ex.Message; }
         finally { _externalSetupCancellation = null; _externalCalibrating = false; RefreshExternalControls(); }
         return false;
+    }
+
+    private async Task PrepareConnectionEngineAsync(PaddiXiangqi.Engine.PikafishClient engine,
+        PaddiXiangqi.Engine.EngineSettings settings, CancellationToken ct)
+    {
+        try
+        {
+            // Avoid retaining two large hash allocations during the transition.
+            // This runs beside recognition; neither the screenshot nor the UI waits.
+            await _engine.ReleaseResourcesAsync(ct);
+            await WarmExternalEngineAsync(engine, settings, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
     }
 
     private async Task TryReadExternalClockTurnAsync(CancellationToken ct)

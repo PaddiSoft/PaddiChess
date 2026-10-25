@@ -24,6 +24,7 @@ public partial class ExternalSessionTests
             var predecessor = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var window = new MainWindow();
             var desktop = new FirstMoveDesktop();
+            var recognizer = new StartupPositionRecognizer(window);
             try
             {
                 window.Show();
@@ -34,7 +35,7 @@ public partial class ExternalSessionTests
                 window.FindControl<ComboBox>("ExternalSpeedBox")!.SelectedIndex = 0;
                 var geometry = new BoardCalibration(40, 40, 440, 490, false);
                 var first = await desktop.CaptureAsync(desktop.Target, default);
-                Set(window, "_externalDesktop", desktop); Set(window, "_positionRecognizer", new SyntheticPositionRecognizer());
+                Set(window, "_externalDesktop", desktop); Set(window, "_positionRecognizer", recognizer);
                 Set(window, "_externalFrame", first);
                 Set(window, "_externalCalibration", geometry);
                 Set(window, "_externalSessionSkin", BoardSkin.Learn("first-move fixture",
@@ -60,6 +61,8 @@ public partial class ExternalSessionTests
                 _latencyOutput.WriteLine($"First input with cancelled {priorWork}: {clock.Elapsed.TotalMilliseconds:F1} ms");
                 Assert.False(predecessor.Task.IsCompleted);
                 Assert.Equal(1, desktop.InputCount);
+                Assert.Equal(1, recognizer.Calls); // Connection evidence also serves the unchanged pre-input image.
+                Assert.Equal(1, Get<PikafishClient>(window, "_externalPlayingEngine").ReadyHandshakeCount);
                 Assert.True(desktop.CapturesAtInput - desktop.CapturesAtStart >= 4,
                     "Initial capture, two live stable frames and fresh pre-input validation must be retained.");
                 Click(window, "ExternalStopButton");
@@ -75,6 +78,24 @@ public partial class ExternalSessionTests
             }
             return true;
         }, default);
+    }
+
+    private sealed class StartupPositionRecognizer(MainWindow window) : IExternalPositionRecognizer
+    {
+        public int Calls { get; private set; }
+        public async Task<SkinRecognition?> ReadAsync(ExternalFrame frame, BoardCalibration geometry,
+            bool redToMove, CancellationToken ct, bool detectOrientation, BoardSkin? sessionSkin, string? customPath)
+        {
+            Calls++;
+            // Engine preparation must already be running while initial recognition is
+            // unresolved, and must not depend on it completing to release a semaphore.
+            var preparation = Get<Task?>(window, "_externalConnectionWarmup");
+            Assert.NotNull(preparation);
+            await preparation.WaitAsync(TimeSpan.FromSeconds(10), ct);
+            Assert.Equal(1, Get<PikafishClient>(window, "_externalPlayingEngine").ProcessStartCount);
+            return await new SyntheticPositionRecognizer().ReadAsync(frame, geometry, redToMove, ct,
+                detectOrientation, sessionSkin, customPath);
+        }
     }
 
     private sealed class FirstMoveDesktop : IExternalDesktop

@@ -33,6 +33,8 @@ public partial class MainWindow
     private LlmMoveResult? _externalPendingThought;
     private string? _externalRecoveryMessage;
     private PikafishClient? _externalPlayingEngine;
+    private PikafishClient? _externalPreparedNewGameEngine;
+    private Task? _externalConnectionWarmup;
 
     private async Task<PikafishClient> GetExternalPlayingEngineAsync()
     {
@@ -427,7 +429,8 @@ public partial class MainWindow
             catch { _externalCancellation?.Cancel(); }
         });
         var engine = await GetExternalPlayingEngineAsync();
-        if (!resume) engine.RequestNewGame();
+        if (!resume && !ReferenceEquals(_externalPreparedNewGameEngine, engine)) engine.RequestNewGame();
+        _externalPreparedNewGameEngine = null;
         Task? warmup = null;
         Task? inputPreparation = null;
         Task? releaseLocalEngine = null;
@@ -479,7 +482,11 @@ public partial class MainWindow
             _game.ExternalAdjudication = true;
             if (!resume)
             {
-                var initial = await Task.Run(() => BoardObservation.Read(geometryFrame, calibration), ct);
+                var setup = _externalSetupBaseline;
+                var reuseSetup = setup != null && ReferenceEquals(setup.Frame, geometryFrame) &&
+                    setup.Geometry == calibration && ExternalPositionRecovery.SamePieces(setup.Fen, fen);
+                var initial = reuseSetup ? setup!.Observation
+                    : await Task.Run(() => BoardObservation.Read(geometryFrame, calibration), ct);
                 // Establish the reference from the recognized connection frame first.
                 // The loop immediately reads a fresh frame and checks identity/size and
                 // legal changes; a temporary capture failure must keep this reference.
@@ -491,7 +498,18 @@ public partial class MainWindow
                 ResetLlmInsights(); ResetLlmThinking(); _pendingLlmDrawOffer = null; _lastLlmDrawOfferPly = -8;
                 _externalPendingMove = null; _externalPendingThought = null; _externalMoveRecovery = null;
                 _externalTracker = await Task.Run(() => new ExternalBoardTracker(initial, _game), ct);
-                try { _externalSessionSkin = await Task.Run(() => BoardSkin.Learn("本次已核对棋盘", initial, _game, requireAllPieces:false), ct); } catch (InvalidOperationException) { }
+                if (reuseSetup) _externalSessionSkin = setup!.Skin;
+                else try { _externalSessionSkin = await Task.Run(() => BoardSkin.Learn("本次已核对棋盘", initial, _game, requireAllPieces:false), ct); } catch (InvalidOperationException) { }
+                if (reuseSetup && _externalInitialRecognition is { Read.Confident: true } evidence &&
+                    ReferenceEquals(evidence.Frame, geometryFrame) && evidence.Geometry == calibration &&
+                    ExternalPositionRecovery.SamePieces(evidence.Read.Fen, fen))
+                {
+                    // Reuse independent connection evidence, never tracker-inferred labels.
+                    // Current() still validates it against each newly captured image.
+                    var identity = _game.StartFen + "|" + _game.UciMoveList;
+                    inputVerification.Seed(identity, null, initial, evidence.Read);
+                    recognitionRefresh.Seed(identity, null, initial, evidence.Read);
+                }
                 RecordTitleBox.Text = "外部接管 · " + target.Title;
                 _moveListDirty = true; ClearSelection(); ResetAnalysisDisplay(); UpdateAnnotationEditor();
             }

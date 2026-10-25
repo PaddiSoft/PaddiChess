@@ -152,7 +152,7 @@ public partial class ExternalSessionTests
             fixture.Window.FindControl<ComboBox>("ExternalDeliveryBox")!.SelectedIndex = delivery;
             var reader = new DelayedPositionRecognizer();
             Set(fixture.Window, "_positionRecognizer", reader);
-            await fixture.ConnectAsync();
+            await BeginWithoutIndependentConnectionReadAsync(fixture);
             await fixture.Model.FirstRequest.Task.WaitAsync(TimeSpan.FromSeconds(5));
             // No move exists yet, and connection alone must never send input.
             await reader.Started.Task.WaitAsync(TimeSpan.FromSeconds(3));
@@ -196,7 +196,7 @@ public partial class ExternalSessionTests
         {
             var reader = new DelayedPositionRecognizer();
             Set(fixture.Window, "_positionRecognizer", reader);
-            await fixture.ConnectAsync();
+            await BeginWithoutIndependentConnectionReadAsync(fixture);
             await WaitPreflightAsync(() => Get<object?>(fixture.Window, "_externalPreparedDecision") != null, fixture.Window);
             Click(fixture.Window, "ExternalStartButton");
             await reader.Started.Task.WaitAsync(TimeSpan.FromSeconds(3));
@@ -221,7 +221,7 @@ public partial class ExternalSessionTests
             fixture.Window.FindControl<ComboBox>("ExternalDeliveryBox")!.SelectedIndex = delivery;
             var reader = new FirstVerificationStallsRecognizer();
             Set(fixture.Window, "_positionRecognizer", reader);
-            await fixture.ConnectAsync();
+            await BeginWithoutIndependentConnectionReadAsync(fixture);
             await reader.Started.Task.WaitAsync(TimeSpan.FromSeconds(3));
             await WaitPreflightAsync(() => Get<object?>(fixture.Window, "_externalPreparedDecision") != null, fixture.Window);
             Click(fixture.Window, "ExternalStartButton");
@@ -231,6 +231,16 @@ public partial class ExternalSessionTests
             Assert.Equal(1, fixture.Desktop.InputCount);
             Assert.True(reader.Verifications >= 2);
         });
+    }
+
+    private static async Task BeginWithoutIndependentConnectionReadAsync(PreflightFixture fixture)
+    {
+        // Manual synchronization has no automatic full-read evidence to reuse. It
+        // must still exercise slow verification, its timeout and capture liveness.
+        await (Task)typeof(MainWindow).GetMethod("ApplyExternalPositionAsync", Private)!
+            .Invoke(fixture.Window, [fixture.Desktop.Game.CurrentFen(), CancellationToken.None])!;
+        typeof(MainWindow).GetMethod("BeginExternalObservation", Private)!.Invoke(fixture.Window, [false]);
+        Assert.True(await Get<TaskCompletionSource<bool>>(fixture.Window, "_externalObservationReady").Task);
     }
 
     private sealed class FirstVerificationStallsRecognizer : IExternalPositionRecognizer

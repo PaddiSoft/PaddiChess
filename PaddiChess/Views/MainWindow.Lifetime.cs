@@ -50,6 +50,7 @@ public partial class MainWindow
         try { await _settingsWriter.FlushAsync(); }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Settings flush: {ex.GetType().Name}"); }
         try { if (_externalTask is not null) await _externalTask; } catch { }
+        try { if (_externalConnectionWarmup is not null) await _externalConnectionWarmup; } catch { }
         await EndExternalHistoryAsync("关闭程序");
         try { if (_searchTask is not null) await _searchTask; } catch { }
         try { if (_llmTask is not null) await _llmTask; } catch { }

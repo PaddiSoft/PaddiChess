@@ -15,6 +15,11 @@ public partial class MainWindow
 {
     private Bitmap? _externalPreview;
     private BoardSkin? _externalSessionSkin;
+    private sealed record ExternalSetupBaseline(ExternalFrame Frame, BoardCalibration Geometry, string Fen,
+        BoardObservation Observation, BoardSkin? Skin);
+    private ExternalSetupBaseline? _externalSetupBaseline;
+    private sealed record ExternalConnectionRead(ExternalFrame Frame, BoardCalibration Geometry, SkinRecognition Read);
+    private ExternalConnectionRead? _externalInitialRecognition;
     private sealed record SkinChoice(string Path, string Name) { public override string ToString() => Name; }
     private static string SkinDirectory => Path.Combine(AppDataPaths.Current.DataDirectory, "BoardSkins");
     private void RefreshSkins()
@@ -83,6 +88,8 @@ public partial class MainWindow
             _externalSetupCancellation?.Token ?? CancellationToken.None);
         var ct = recognitionCancellation.Token;
         _externalPositionReady = false;
+        _externalInitialRecognition = null;
+        _externalSetupBaseline = null;
         var geometry = _externalCalibration! with { RedAtTop = ExternalOrientationBox.SelectedIndex == 1 };
         // Unknown is a display/authority state, not a request to flip the FEN.
         // Keep its last imported placeholder until position/clock/move evidence confirms a side.
@@ -161,6 +168,7 @@ public partial class MainWindow
                 var fields = result.Fen.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 if (_externalTurnKnown) fields[1] = ExternalTurnBox.SelectedIndex == 0 ? "w" : "b";
                 await ApplyExternalPositionAsync(string.Join(' ', fields), ct);
+                _externalInitialRecognition = new(frame, geometry, result);
             }
             if (!_externalLinked) ExternalStatusText.Text = _externalTurnKnown
                 ? $"局面已同步 · 当前轮到{(_game.RedToMove ? "红" : "黑")}方 · 默认接管棋盘下方。"
@@ -191,8 +199,9 @@ public partial class MainWindow
         var frame = _externalFrame;
         var geometry = _externalCalibration is { } calibration
             ? calibration with { RedAtTop = ExternalOrientationBox.SelectedIndex == 1 } : null;
-        var observation = frame != null && geometry != null
-            ? await Task.Run(() => BoardObservation.Read(frame, geometry), ct) : null;
+        var observation = _externalSettledSample is { } settled && ReferenceEquals(settled.Frame, frame) && settled.Geometry == geometry
+            ? settled.Observation : frame != null && geometry != null
+                ? await Task.Run(() => BoardObservation.Read(frame, geometry), ct) : null;
         ct.ThrowIfCancellationRequested();
         if (_externalLinked && _externalTracker != null && _externalFrame != null && _externalCalibration != null &&
             validated.RedToMove == _game.RedToMove && ExternalPositionRecovery.SamePieces(fen,_game.CurrentFen()))
@@ -230,6 +239,8 @@ public partial class MainWindow
         ExternalFenBox.Text = fen; SetExternalTurn(_externalTurnKnown ? _game.RedToMove : null); _externalPositionReady = true;
         Board.Flipped = ExternalOrientationBox.SelectedIndex == 1; Board.Refresh(); RefreshUi();
         _externalSessionSkin = learned;
+        _externalSetupBaseline = frame != null && geometry != null && observation != null
+            ? new(frame, geometry, fen, observation, learned) : null;
     }
     private async void ExternalEditPosition_Click(object? sender, RoutedEventArgs e)
     {

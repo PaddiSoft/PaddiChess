@@ -8,10 +8,12 @@ namespace PaddiXiangqi.Views;
 public partial class MainWindow
 {
     private ExternalMoveRecovery? _externalMoveRecovery;
+    private (ExternalFrame Frame, BoardCalibration Geometry, BoardObservation Observation)? _externalSettledSample;
 
     private async Task<(ExternalFrame Frame, BoardCalibration Geometry)> ReadSettledExternalFrameAsync(
         ExternalFrame first, BoardCalibration geometry, CancellationToken ct)
     {
+        _externalSettledSample = null;
         if (_externalDesktop == null) return (first, geometry);
         var previous = await Task.Run(() => BoardObservation.Read(first, geometry), ct);
         var frame = first;
@@ -22,7 +24,11 @@ public partial class MainWindow
             if (!ExternalCaptureGeometry.TryRebaseCalibration(frame, next, geometry, out var nextGeometry))
                 throw new InvalidOperationException("同步期间窗口尺寸变化，请重新定位。");
             var observation = await Task.Run(() => BoardObservation.Read(next, nextGeometry), ct);
-            if (observation.StableWith(previous)) return (next, nextGeometry);
+            if (observation.StableWith(previous))
+            {
+                _externalSettledSample = (next, nextGeometry, observation);
+                return (next, nextGeometry);
+            }
             previous = observation; frame = next; geometry = nextGeometry;
         }
         throw new InvalidOperationException("棋子仍在移动，尚未采用移动中的局面。请待棋子落定后同步。");

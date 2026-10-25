@@ -130,13 +130,23 @@ public static class LocalBoardClassifier
     // Match the upstream 450x500 warp -> centre 400x450 crop -> 280x315 resize.
     // Two interpolation stages matter for small glyphs. This axis-aligned grid
     // implementation needs neither OpenCV nor a Python process at runtime.
-    private static float[] Preprocess(CapturedPixels pixels, BoardCalibration geometry, CancellationToken ct)
+    internal static float[] Preprocess(CapturedPixels pixels, BoardCalibration geometry, CancellationToken ct)
     {
         var crop = new byte[400 * 450 * 3];
         var sx = (geometry.Right - geometry.Left) / 350;
         var sy = (geometry.Bottom - geometry.Top) / 400;
         double originX = geometry.Left, originY = geometry.Top;
         if (geometry.RedAtTop) { originX = geometry.Right; originY = geometry.Bottom; sx = -sx; sy = -sy; }
+        // X interpolation is identical in every row. Precompute it once, retaining
+        // both rounding stages and exact arithmetic order used by the model export.
+        Span<int> sourceX = stackalloc int[400];
+        Span<double> weightX = stackalloc double[400];
+        for (var x = 0; x < 400; x++)
+        {
+            var px = Math.Round((originX + (x - 25) * sx) * 32) / 32;
+            sourceX[x] = (int)Math.Floor(px); weightX[x] = px - sourceX[x];
+        }
+        var data = pixels.Bgra;
         for (var y = 0; y < 450; y++)
         {
             ct.ThrowIfCancellationRequested();
@@ -144,27 +154,34 @@ public static class LocalBoardClassifier
             var iy = (int)Math.Floor(py); var fy = py - iy;
             for (var x = 0; x < 400; x++)
             {
-                var px = Math.Round((originX + (x - 25) * sx) * 32) / 32;
-                var ix = (int)Math.Floor(px); var fx = px - ix;
+                var ix = sourceX[x]; var fx = weightX[x];
+                int Offset(int xx, int yy) => (uint)xx >= (uint)pixels.Width || (uint)yy >= (uint)pixels.Height
+                    ? -1 : yy * pixels.RowBytes + xx * 4;
+                var tl = Offset(ix, iy); var tr = Offset(ix + 1, iy);
+                var bl = Offset(ix, iy + 1); var br = Offset(ix + 1, iy + 1);
                 for (var c = 0; c < 3; c++)
                 {
-                    byte Pixel(int xx, int yy) => xx < 0 || yy < 0 || xx >= pixels.Width || yy >= pixels.Height
-                        ? (byte)0 : pixels.Bgra[yy * pixels.RowBytes + xx * 4 + 2 - c];
-                    var top = Pixel(ix, iy) * (1 - fx) + Pixel(ix + 1, iy) * fx;
-                    var bottom = Pixel(ix, iy + 1) * (1 - fx) + Pixel(ix + 1, iy + 1) * fx;
+                    var channel = 2 - c;
+                    var top = (tl < 0 ? 0 : data[tl + channel]) * (1 - fx) + (tr < 0 ? 0 : data[tr + channel]) * fx;
+                    var bottom = (bl < 0 ? 0 : data[bl + channel]) * (1 - fx) + (br < 0 ? 0 : data[br + channel]) * fx;
                     crop[(y * 400 + x) * 3 + c] = (byte)Math.Clamp(Math.Floor(top * (1 - fy) + bottom * fy + .5), 0, 255);
                 }
             }
         }
         var input = new float[3 * 315 * 280];
         double[] mean = [123.675, 116.28, 103.53], std = [58.395, 57.12, 57.375];
+        for (var x = 0; x < 280; x++)
+        {
+            var px = (x + .5) * 400 / 280 - .5;
+            sourceX[x] = (int)px; weightX[x] = px - sourceX[x];
+        }
         for (var y = 0; y < 315; y++)
         {
             ct.ThrowIfCancellationRequested();
             var py = (y + .5) * 450 / 315 - .5; var iy = (int)py; var fy = py - iy;
             for (var x = 0; x < 280; x++)
             {
-                var px = (x + .5) * 400 / 280 - .5; var ix = (int)px; var fx = px - ix;
+                var ix = sourceX[x]; var fx = weightX[x];
                 for (var c = 0; c < 3; c++)
                 {
                     var top = crop[(iy * 400 + ix) * 3 + c] * (1 - fx) + crop[(iy * 400 + ix + 1) * 3 + c] * fx;
