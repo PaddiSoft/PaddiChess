@@ -53,8 +53,8 @@ public partial class MainWindow
 
     private void SetupClear_Click(object? sender, RoutedEventArgs e)
     {
-        _setupEditor?.Clear();
-        SetupErrorText.Text = "请摆入红帅与黑将，再确定局面。";
+        _setupEditor?.ClearKeepingKings();
+        SetupSelectedText.Text = "已保留黑将和红帅，可继续摆棋或撤销。";
     }
 
     private void SetupConfirm_Click(object? sender, RoutedEventArgs e)
@@ -62,12 +62,14 @@ public partial class MainWindow
         if (_setupBoard is null) return;
         RestorePickedPiece();
         string fen;
-        try { fen = PositionSetup.BuildFen(_setupBoard, SetupSideCombo.SelectedIndex != 1); }
+        bool rotated;
+        try { fen = PositionSetup.BuildEditorFen(_setupBoard, SetupSideCombo.SelectedIndex != 1, out rotated); }
         catch (FormatException ex) { SetupErrorText.Text = ex.Message; return; }
 
         CancelSearch();
         _game.ExternalAdjudication = false;
         _game.LoadFen(fen);
+        if (rotated) Board.Flipped = !Board.Flipped;
         _engine.RequestNewGame();
         _notes.Clear();
         _scores.Clear(); _scoreLabels.Clear();

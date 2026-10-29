@@ -156,13 +156,15 @@
                 <Button x:Name="SetupUndoButton" Click="SetupUndo_Click" Content="撤销编辑" Padding="5,5" FontSize="11"/>
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="5">
                   <Button Grid.Column="0" Click="SetupStandard_Click" Content="标准布局" Padding="5,5" FontSize="11"/>
-                  <Button x:Name="SetupClearButton" Grid.Column="1" Click="SetupClear_Click" Content="清空棋盘" Padding="5,5" FontSize="11"/>
+                  <Button x:Name="SetupClearButton" Grid.Column="1" Click="SetupClear_Click" Content="清空棋盘" Padding="5,5" FontSize="11"
+                          ToolTip.Tip="清除其他棋子，保留黑将和红帅；缺失的将帅会补回。可撤销。"/>
                 </Grid>
                 <TextBlock Text="先手" Foreground="#46566E" FontWeight="SemiBold" FontSize="12"/>
                 <ComboBox x:Name="SetupSideCombo" SelectedIndex="0">
                   <ComboBoxItem Content="红方先走"/>
                   <ComboBoxItem Content="黑方先走"/>
                 </ComboBox>
+                <TextBlock Text="将帅位置决定朝向；确认后保留当前布局。" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
                 <TextBlock x:Name="SetupErrorText" Foreground="#B23A43" FontSize="11" TextWrapping="Wrap"/>
                 <Button Classes="primary" Click="SetupConfirm_Click" Content="确定局面，开始记录"/>
                 <Button Click="SetupCancel_Click" Content="取消摆棋"/>

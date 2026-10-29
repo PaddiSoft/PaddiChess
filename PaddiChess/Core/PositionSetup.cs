@@ -57,6 +57,32 @@ public static class PositionSetup
         return $"{string.Join('/', ranks)} {(redToMove ? 'w' : 'b')} - - 0 1";
     }
 
+    /// <summary>
+    /// Resolve a manually composed board's orientation from its kings. The caller
+    /// reverses its view when rotated is true, keeping every displayed piece in place.
+    /// Recognition, imported FEN and normal game coordinates still use strict BuildFen.
+    /// </summary>
+    public static string BuildEditorFen(char[,] board, bool redToMove, out bool rotated)
+    {
+        rotated = false;
+        if (board.GetLength(0) != 10 || board.GetLength(1) != 9 ||
+            CountPieces(board, 'K') != 1 || CountPieces(board, 'k') != 1 ||
+            XiangqiGame.FindKing(board, true) is not { } redKing ||
+            XiangqiGame.FindKing(board, false) is not { } blackKing ||
+            !CanOccupySquare('k', redKing) || !CanOccupySquare('K', blackKing))
+            return BuildFen(board, redToMove);
+
+        // Both kings occupy the opposite palaces: rotate coordinates, not colors
+        // or the selected side to move. Never mutate an unfinished editor on failure.
+        var canonical = new char[10, 9];
+        for (var rank = 0; rank < 10; rank++)
+        for (var file = 0; file < 9; file++)
+            canonical[9 - rank, 8 - file] = board[rank, file];
+        var fen = BuildFen(canonical, redToMove);
+        rotated = true;
+        return fen;
+    }
+
     public static void Validate(char[,] board)
     {
         if (board.GetLength(0) != 10 || board.GetLength(1) != 9)

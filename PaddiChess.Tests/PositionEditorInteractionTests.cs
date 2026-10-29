@@ -113,6 +113,52 @@ public class PositionEditorStateTests
         editor.Clear(); Assert.True(editor.CanUndo);
         editor.ReplaceBoard(new char[10, 9]); Assert.False(editor.CanUndo);
     }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void CustomClearKeepsMovedKingsAndUndoRestoresTheEntirePosition(bool reversed)
+    {
+        var board = new char[10, 9];
+        var red = new Square(3, reversed ? 1 : 8);
+        var black = new Square(5, reversed ? 8 : 1);
+        board[red.Rank, red.File] = 'K'; board[black.Rank, black.File] = 'k';
+        board[4, 2] = 'R'; board[5, 6] = 'p';
+        var before = board.Cast<char>().ToArray();
+        var editor = new PositionEditorState(board);
+        editor.Click(red);
+        editor.ClearKeepingKings();
+        Assert.Equal(2, board.Cast<char>().Count(piece => piece != '\0'));
+        Assert.Equal('K', board[red.Rank, red.File]); Assert.Equal('k', board[black.Rank, black.File]);
+        Assert.Null(editor.SelectedSquare); Assert.Equal(PositionEditorTool.Move, editor.Tool);
+        Assert.False(editor.CanAdd('K')); Assert.False(editor.CanAdd('k'));
+        editor.ClearKeepingKings(); // No-op clear must not insert another undo step.
+        editor.Undo(); Assert.Equal(before, board.Cast<char>().ToArray());
+        Assert.False(editor.CanUndo);
+    }
+
+    [Theory]
+    [InlineData('K', 0, 9)] [InlineData('K', 9, 0)]
+    [InlineData('k', 0, 9)] [InlineData('k', 9, 0)]
+    public void CustomClearRestoresAMissingKingOnTheOppositeSide(char survivor, int rank, int restoredRank)
+    {
+        var board = new char[10, 9]; board[rank, 4] = survivor;
+        var editor = new PositionEditorState(board);
+        editor.ClearKeepingKings();
+        Assert.Equal(survivor, board[rank, 4]);
+        Assert.Equal(survivor == 'K' ? 'k' : 'K', board[restoredRank, 4]);
+        Assert.Equal(1, PositionSetup.CountPieces(board, 'K'));
+        Assert.Equal(1, PositionSetup.CountPieces(board, 'k'));
+        editor.Undo(); Assert.Equal(1, board.Cast<char>().Count(piece => piece != '\0'));
+    }
+
+    [Fact]
+    public void CustomClearRestoresBothMissingKingsAndRemainsUndoable()
+    {
+        var editor = new PositionEditorState(new char[10, 9]);
+        editor.ClearKeepingKings();
+        Assert.Equal('k', editor.Board[0, 4]); Assert.Equal('K', editor.Board[9, 4]);
+        editor.Undo(); Assert.All(editor.Board.Cast<char>(), piece => Assert.Equal('\0', piece));
+    }
 }
 
 [Collection("Desktop integration")]
@@ -303,9 +349,13 @@ public class PositionEditorInteractionTests
                 ClickSquare(window, board, new(0, 9)); Assert.Equal('R', board.SetupBoard![9, 0]);
                 ClickSquare(window, board, new(0, 8)); Assert.Equal('R', board.SetupBoard[8, 0]);
                 window.FindControl<Button>("SetupClearButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-                Assert.All(PaletteButtons(palette), button => Assert.True(button.IsEnabled));
-                Assert.True(palette.Editor!.SelectPiece('K'));
-                ClickSquare(window, board, new(4, 9));
+                Assert.All(PaletteButtons(palette), button =>
+                    Assert.Equal(((PiecePaletteItemViewModel)button.DataContext!).Piece is not ('K' or 'k'), button.IsEnabled));
+                Assert.Equal(2, board.SetupBoard.Cast<char>().Count(piece => piece != '\0'));
+                Assert.Equal('K', board.SetupBoard[9, 4]); Assert.Equal('k', board.SetupBoard[0, 4]);
+                ClickSquare(window, board, new(4, 9)); ClickSquare(window, board, new(3, 9));
+                Assert.Equal('K', board.SetupBoard[9, 3]);
+                Assert.NotNull(palette.Editor);
                 Assert.False(palette.Editor.CanAdd('K'));
                 Assert.Equal(PositionEditorTool.Move, palette.Editor.Tool);
             }

@@ -40,6 +40,23 @@ public sealed class PositionEditorState
         Array.Clear(Board); ResetSelection(PositionEditorTool.Move); Notify();
     }
 
+    /// <summary>Start a new custom layout while retaining both kings and their positions.</summary>
+    public void ClearKeepingKings()
+    {
+        var red = XiangqiGame.FindKing(Board, true);
+        var black = XiangqiGame.FindKing(Board, false);
+        var reversed = red is { } r && PositionSetup.CanOccupySquare('k', r) ||
+            black is { } b && PositionSetup.CanOccupySquare('K', b);
+        var redSquare = red ?? new Square(4, reversed ? 0 : 9);
+        var blackSquare = black ?? new Square(4, reversed ? 9 : 0);
+        var cleared = new char[10, 9];
+        cleared[redSquare.Rank, redSquare.File] = 'K';
+        cleared[blackSquare.Rank, blackSquare.File] = 'k';
+        if (!Board.Cast<char>().SequenceEqual(cleared.Cast<char>())) Remember();
+        Array.Copy(cleared, Board, Board.Length);
+        ResetSelection(PositionEditorTool.Move); Notify();
+    }
+
     public void Undo()
     {
         if (_undo.Last is not { } last) return;
