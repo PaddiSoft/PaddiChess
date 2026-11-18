@@ -34,5 +34,15 @@
     "url": "https://raw.githubusercontent.com/rsms/inter/0a5106e0bde18df09374066bf3a7998e3546307d/LICENSE.txt",
     "sha256": "4d7d9c95e7d7f2f0ebf76d5e0b344826b74e903a34028ee18ab54bb639e45906",
     "evidence": "Avalonia Fonts.Inter 12.0.4 bundled Inter-Regular.ttf name table: Version 3.019;git-0a5106e0b"
+  },
+  {
+    "file": "../OpeningBooks/GPL-3.0.txt",
+    "url": "https://github.com/liujh168/openbook/blob/33e02fc9cccb4e6c4f45029d707d3074090f9107/LICENSE",
+    "sha256": "325d6b67f61382ad4d8c699cc1c8d5ed9c75a886d940575e84b3eef5cc108be2"
+  },
+  {
+    "file": "../OpeningBooks/LGPL-2.1.txt",
+    "url": "https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt",
+    "sha256": "ce64d5f7b49ea6d80fdb6d4cdee6839d1a94274f7493dc797c3b55b65ec8e9ed"
   }
 ]

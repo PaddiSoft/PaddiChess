@@ -1,0 +1,37 @@
+[
+  {
+    "fen": "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w",
+    "move": "h2e2",
+    "binghe": "628D04D7C9C144AE",
+    "eleeye": "052656D5",
+    "jqxq": "52DFA0347C3B4C0F"
+  },
+  {
+    "fen": "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR b",
+    "move": "b7e7",
+    "binghe": "C2432E2EC5846BF6",
+    "eleeye": "6238505F",
+    "jqxq": "9B7F2B3A437E06C8"
+  },
+  {
+    "fen": "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C2C4/9/RNBAKABNR b",
+    "move": "b7e7",
+    "binghe": "A1EAD1F6470E07EE",
+    "eleeye": "EB505D7D",
+    "jqxq": "9B005155E42909F1"
+  },
+  {
+    "fen": "rnbakabnr/9/4c2c1/p1p1p1p1p/9/9/P1P1P1P1P/1C2C4/9/RNBAKABNR w",
+    "move": "b0c2",
+    "binghe": "4F6A3EBE47BBA45E",
+    "eleeye": "BE4F8E4A",
+    "jqxq": "DD90F1DC0930A4C1"
+  },
+  {
+    "fen": "4k4/8n/4r2p1/1P7/2R1P2N1/9/9/9/9/3CK1c2 w",
+    "move": "a0a1",
+    "binghe": "FFF890D10052BD67",
+    "eleeye": "DB625F10",
+    "jqxq": "38B4395A8FAB0D79"
+  }
+]

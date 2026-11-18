@@ -21,7 +21,7 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
-    <Content Include="Fixtures/OpeningBooks/*.xqb" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Fixtures/OpeningBooks/*.xqb;Fixtures/OpeningBooks/*.obk;Fixtures/OpeningBooks/*.bin;Fixtures/OpeningBooks/*.dat;Fixtures/OpeningBooks/*.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Fixtures/*.png" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Fixtures/recognition-cases.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

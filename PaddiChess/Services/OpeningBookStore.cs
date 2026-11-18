@@ -7,7 +7,8 @@ namespace PaddiXiangqi.Services;
 
 public sealed record OpeningBookProfile(string Id, string Name, string FileName)
 {
-    public override string ToString() => Name;
+    public string? Format { get; init; }
+    public override string ToString() => string.IsNullOrWhiteSpace(Format) ? Name : $"{Name} · {Format}";
 }
 
 public sealed class OpeningBookStore(string dataDirectory, string? cacheDirectory = null)
@@ -56,24 +57,34 @@ public sealed class OpeningBookStore(string dataDirectory, string? cacheDirector
     {
         if (profile.Id == BundledId) return BundledPath;
         // Only a managed file name is persisted. Imported files never execute code.
-        if (profile.FileName != Path.GetFileName(profile.FileName) || !profile.FileName.EndsWith(".xqb", StringComparison.OrdinalIgnoreCase))
+        if (profile.FileName.IndexOfAny(['/', '\\', ':']) >= 0 || profile.FileName != Path.GetFileName(profile.FileName) || !OpeningBookReader.HasSupportedExtension(profile.FileName))
             throw new FormatException("开局库文件名无效。");
         return Path.Combine(DirectoryPath, profile.FileName);
     }
 
     public async Task<OpeningBookProfile> ImportAsync(string source, CancellationToken ct = default)
     {
-        if (!source.EndsWith(".xqb", StringComparison.OrdinalIgnoreCase)) throw new FormatException("请选择 .xqb 开局库。");
+        if (!OpeningBookReader.HasSupportedExtension(source)) throw new FormatException("请选择 .xqb、.obk、.bin 或 .dat 开局库。");
+        ct.ThrowIfCancellationRequested();
+        OpeningBookReader.RequireStandaloneDatabase(source);
+        var original = new FileInfo(source); var length = original.Length; var modified = original.LastWriteTimeUtc;
         Directory.CreateDirectory(DirectoryPath);
-        var id = Guid.NewGuid().ToString("N"); var file = id + ".xqb";
+        var id = Guid.NewGuid().ToString("N"); var file = id + Path.GetExtension(source).ToLowerInvariant();
         var destination = Path.Combine(DirectoryPath, file);
         try
         {
             await using (var input = File.OpenRead(source))
             await using (var output = File.Create(destination))
                 await input.CopyToAsync(output, ct).ConfigureAwait(false);
-            await Task.Run(() => { using var db = new XqbDatabase(destination, ct); db.Validate(); }, ct).ConfigureAwait(false);
-            return new(id, Path.GetFileNameWithoutExtension(source), file);
+            original.Refresh(); OpeningBookReader.RequireStandaloneDatabase(source);
+            if (original.Length != length || original.LastWriteTimeUtc != modified)
+                throw new IOException("复制时开局库发生了变化，请关闭编辑软件后重新导入。");
+            var format = await Task.Run(() =>
+            {
+                using var db = OpeningBookReader.Open(destination, ct); db.Validate(full: true);
+                ct.ThrowIfCancellationRequested(); return db.FormatName;
+            }, ct).ConfigureAwait(false);
+            return new(id, Path.GetFileNameWithoutExtension(source), file) { Format = format };
         }
         catch { File.Delete(destination); throw; }
     }

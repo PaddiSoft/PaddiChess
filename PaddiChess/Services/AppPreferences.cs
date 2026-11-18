@@ -75,7 +75,7 @@ public sealed class AppPreferences
         preferences.NormalizeEnginePlugins();
         preferences.OpeningBooks = (preferences.OpeningBooks ?? []).Where(p => p is not null && !string.IsNullOrWhiteSpace(p.Id) &&
             p.Id != OpeningBookStore.BundledId && !string.IsNullOrWhiteSpace(p.FileName) &&
-            p.FileName.IndexOfAny(['/', '\\', ':']) < 0 && p.FileName.EndsWith(".xqb", StringComparison.OrdinalIgnoreCase))
+            p.FileName.IndexOfAny(['/', '\\', ':']) < 0 && PaddiXiangqi.Engine.OpeningBookReader.HasSupportedExtension(p.FileName))
             .Select(p => p with { Name = string.IsNullOrWhiteSpace(p.Name) ? "未命名开局库" : p.Name })
             .DistinctBy(p => p.Id).ToList();
         preferences.OpeningBookId ??= OpeningBookStore.BundledId;

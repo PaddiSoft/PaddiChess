@@ -3,7 +3,10 @@ using PaddiXiangqi.Core;
 namespace PaddiXiangqi.Engine;
 
 public sealed record OpeningBookOptions(string Path, string Name, int MaxFullmoves = 20, bool RandomBest = false);
-public sealed record OpeningBookHit(string Move, string Name, int BookScore);
+public sealed record OpeningBookHit(string Move, string Name, int BookScore)
+{
+    public string ValueLabel { get; init; } = "库分";
+}
 
 public static class OpeningBook
 {
@@ -39,11 +42,12 @@ public static class OpeningBook
                 if (!game.TryMoveUci(move, out _) || !visited.Add(PositionKey(game.CurrentFen()))) return null;
             }
             if (game.FullmoveNumber > Math.Clamp(options.MaxFullmoves, 1, 40)) return null;
-            using var db = new XqbDatabase(options.Path, ct);
+            using var db = OpeningBookReader.Open(options.Path, ct);
             db.Validate();
             var legal = game.AllLegalMoves().Select(m => m.Uci).ToHashSet(StringComparer.Ordinal);
             var choices = new List<BookMove>();
-            foreach (var entry in db.Lookup(game.CurrentFen()).Where(m => legal.Contains(m.Move)).DistinctBy(m => m.Move))
+            foreach (var entry in db.Lookup(game.CurrentFen()).Where(m => legal.Contains(m.Move))
+                .GroupBy(m => m.Move).Select(g => g.MaxBy(m => m.Score)!))
             {
                 game.TryMoveUci(entry.Move, out _);
                 var repeats = visited.Contains(PositionKey(game.CurrentFen()));
@@ -55,7 +59,7 @@ public static class OpeningBook
             var bestScore = choices.Max(m => m.Score);
             var best = choices.Where(m => m.Score == bestScore).OrderBy(m => m.Move, StringComparer.Ordinal).ToArray();
             var selected = best[options.RandomBest ? Random.Shared.Next(best.Length) : 0];
-            return new(selected.Move, options.Name, selected.Score);
+            return new(selected.Move, options.Name, selected.Score) { ValueLabel = db.ValueLabel };
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or FormatException or DllNotFoundException or EntryPointNotFoundException)

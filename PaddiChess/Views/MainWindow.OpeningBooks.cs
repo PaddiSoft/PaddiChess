@@ -56,7 +56,7 @@ public partial class MainWindow
         _preferences.OpeningBookRandomBest = BookPolicyBox.SelectedIndex == 1;
         _preferences.OpeningBookMaxFullmoves = (int)(BookRoundsBox.Value ?? 20);
         BookRemoveButton.IsEnabled = profile.Id != OpeningBookStore.BundledId;
-        BookStatusText.Text = _preferences.OpeningBookEnabled ? "当前开局库：" + profile.Name : "已停用开局库，使用引擎搜索";
+        BookStatusText.Text = _preferences.OpeningBookEnabled ? "当前开局库：" + profile : "已停用开局库，使用引擎搜索";
         CancelSearch(); SaveSettings(); MaybeStartSearch();
     }
     private OpeningBookOptions? ReadOpeningBookOptions()
@@ -69,7 +69,7 @@ public partial class MainWindow
         var files = await StorageProvider.OpenFilePickerAsync(new()
         {
             Title = "导入本地开局库", AllowMultiple = true,
-            FileTypeFilter = [new FilePickerFileType("象棋 XQB 开局库") { Patterns = ["*.xqb"] }]
+            FileTypeFilter = [new FilePickerFileType("象棋开局库（XQB / OBK / BIN / DAT）") { Patterns = ["*.xqb", "*.obk", "*.bin", "*.dat"] }]
         });
         if (files.Count == 0) return;
         SettingsPage.Control<Button>("BookImportButton").IsEnabled = false;
@@ -104,9 +104,9 @@ public partial class MainWindow
     private void ShowOpeningBookHit(OpeningBookHit hit)
     {
         EngineStatusText.Text = "开局库命中 · " + hit.Name;
-        ScoreText.Text = "库分 " + hit.BookScore;
+        ScoreText.Text = hit.ValueLabel + " " + hit.BookScore;
         DepthText.Text = NodesText.Text = NpsText.Text = "—";
-        WdlText.Text = "开局库分值，非引擎实时评分";
+        WdlText.Text = hit.ValueLabel + "用于库内选招，非引擎实时评分";
         BestMoveText.Text = DescribeUci(hit.Move);
         PvText.Text = BestMoveText.Text;
         ResetVariationChoices();

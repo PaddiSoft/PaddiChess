@@ -6,8 +6,9 @@ namespace PaddiXiangqi.Engine;
 public sealed record BookMove(string Move, int Score, long Wins, long Draws, long Losses);
 
 /// <summary>Read-only, indexed and time-bounded access to the OS SQLite runtime.</summary>
-public sealed class XqbDatabase : IDisposable
+public sealed class XqbDatabase : IOpeningBookReader
 {
+    public string FormatName => "XQB v1";
     private IntPtr _db;
     private readonly Native.Progress _progress;
     private readonly Stopwatch _elapsed = Stopwatch.StartNew();
@@ -27,12 +28,12 @@ public sealed class XqbDatabase : IDisposable
         catch { Dispose(); throw; }
     }
 
-    public void Validate()
+    public void Validate(bool full = false)
     {
         string? version = null, type = null;
         Query("SELECT name,value FROM information LIMIT 32", s =>
         { var key = Text(s, 0); if (key == "version") version = Text(s, 1); if (key == "type") type = Text(s, 1); });
-        if (version != "1" || type != "xiangqi") throw new FormatException("仅支持象棋 XQB v1 开局库；OBK、BIN 和棋谱文件不能直接导入。");
+        if (version != "1" || type != "xiangqi") throw new FormatException("此 XQB 文件不是受支持的象棋 XQB v1 开局库。");
         var indexed = false;
         Query("EXPLAIN QUERY PLAN SELECT move,score,win,draw,lost,valid FROM book WHERE key=x'00' LIMIT 256", s =>
         { if (Text(s, 3).Contains("SEARCH", StringComparison.OrdinalIgnoreCase)) indexed = true; });
@@ -53,10 +54,21 @@ public sealed class XqbDatabase : IDisposable
         return moves;
     }
     private static string Text(IntPtr s, int i) => Marshal.PtrToStringUTF8(Native.sqlite3_column_text(s, i)) ?? "";
+    // Schema only: never let SQLite convert OBK's unsigned raw REAL keys to doubles.
+    internal List<string[]> ReadMetadata(string sql, int columns)
+    {
+        var rows = new List<string[]>();
+        Query(sql, s =>
+        {
+            if (rows.Count >= 128) throw new FormatException("开局库结构过于复杂。");
+            rows.Add(Enumerable.Range(0, columns).Select(i => Text(s, i)).ToArray());
+        });
+        return rows;
+    }
     private void Query(string sql, Action<IntPtr> row)
     {
         if (Native.sqlite3_prepare_v2(_db, sql, -1, out var statement, IntPtr.Zero) != 0)
-            throw new FormatException("开局库结构损坏或不是兼容的 XQB 文件。");
+            throw new FormatException("开局库结构损坏或不是兼容的数据库文件。");
         try
         {
             int status;

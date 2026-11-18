@@ -10,8 +10,12 @@ namespace PaddiXiangqi.Tests;
 [Collection("Desktop integration")]
 public class OpeningBookUiTests
 {
-    [Fact]
-    public async Task UserLibrarySelectionPersistsAndOnlyAffectsPlayingSearches()
+    [Theory]
+    [InlineData("sample.xqb")]
+    [InlineData("binghe.obk")]
+    [InlineData("eleeye.dat")]
+    [InlineData("jqxq.bin")]
+    public async Task UserLibrarySelectionPersistsAndOnlyAffectsPlayingSearches(string fileName)
     {
         await ExternalSessionTests.Session.Dispatch(async () =>
         {
@@ -23,7 +27,7 @@ public class OpeningBookUiTests
             try
             {
                 var store = new OpeningBookStore(folder);
-                var profile = await store.ImportAsync(Path.Combine(AppContext.BaseDirectory, "Fixtures", "OpeningBooks", "sample.xqb"));
+                var profile = await store.ImportAsync(Path.Combine(AppContext.BaseDirectory, "Fixtures", "OpeningBooks", fileName));
                 new AppPreferences { AutoAnalyze = false, OpeningBooks = [profile], OpeningBookId = profile.Id }.Save();
                 window = new MainWindow(); window.Show();
                 Assert.Equal(profile.Id, ((OpeningBookProfile)window.FindControl<ComboBox>("BookChoiceBox")!.SelectedItem!).Id);
@@ -47,6 +51,8 @@ public class OpeningBookUiTests
                 Assert.False(saved.OpeningBookEnabled); Assert.Equal(profile.Id, saved.OpeningBookId);
                 Assert.Equal(12, saved.OpeningBookMaxFullmoves); Assert.True(saved.OpeningBookRandomBest);
                 Assert.Single(saved.OpeningBooks);
+                Assert.Equal(profile.Format, saved.OpeningBooks[0].Format);
+                Assert.Equal(profile.FileName, saved.OpeningBooks[0].FileName);
             }
             finally
             {
