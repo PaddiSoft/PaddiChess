@@ -23,6 +23,8 @@ public partial class ExternalSessionTests
             {
                 window.Show();
                 window.FindControl<CheckBox>("AutoAnalyzeCheck")!.IsChecked = false;
+                // Exercise a running engine search; an opening-book hit would finish immediately.
+                window.FindControl<CheckBox>("BookEnabledCheck")!.IsChecked = false;
                 window.FindControl<Slider>("LevelSlider")!.Value = 20;
                 window.FindControl<NumericUpDown>("ThreadsBox")!.Value = 1;
                 window.FindControl<NumericUpDown>("ThinkBox")!.Value = 30;

@@ -31,6 +31,8 @@ public partial class ExternalSessionTests
             try
             {
                 window.Show();
+                // This test checks engine-process reuse across pause/resume, not book selection.
+                window.FindControl<CheckBox>("BookEnabledCheck")!.IsChecked = false;
                 window.FindControl<Slider>("LevelSlider")!.Value=20;
                 window.FindControl<NumericUpDown>("ThreadsBox")!.Value=1;
                 window.FindControl<CheckBox>("DepthLimitCheck")!.IsChecked = true;
