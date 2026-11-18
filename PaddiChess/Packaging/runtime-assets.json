@@ -47,5 +47,12 @@
       "PaddiChess/Assets/Recognition/SOURCE.md",
       "PaddiChess/Assets/Recognition/LICENSE.txt"
     ]
+  },
+  {
+    "file": "PaddiChess/Assets/OpeningBooks/guagudao-20261118.xqb.gz",
+    "sha256": "65f5473a7c0cf67a136fcbcb7ba1736abd5dc35924ec371e92d38a252807819a",
+    "notices": [
+      "PaddiChess/Assets/OpeningBooks/README.md"
+    ]
   }
 ]

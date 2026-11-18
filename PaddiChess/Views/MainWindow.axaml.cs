@@ -86,6 +86,7 @@ public partial class MainWindow : Window
         DepthBox.Value = Math.Clamp(_preferences.MaxDepth, 1, 255);
         DepthLimitCheck.IsChecked = _preferences.UseDepthLimit;
         InitializeEnginePhaseControls();
+        InitializeOpeningBooks();
         ShowCoordinatesCheck.IsChecked = _preferences.ShowCoordinates;
         AnimationMsBox.Value = Math.Clamp(_preferences.AnimationDurationMs, 0, 1000);
         RecordTitleBox.Text = "";
@@ -440,7 +441,7 @@ public partial class MainWindow : Window
                 {
                     variations[info.MultiPv] = info;
                     if (info.MultiPv == 1) Interlocked.Exchange(ref latestInfo, info);
-                }, tokenSource.Token);
+                }, tokenSource.Token, bookAllowedMoves: nativeChoices?.Allowed);
             if (generation != _searchGeneration) return;
             if (Interlocked.Exchange(ref latestInfo, null) is { } finalInfo)
             {
@@ -451,6 +452,7 @@ public partial class MainWindow : Window
             var chosen = ChooseMove(result, settings.Level, playMove, nativeChoices?.Allowed);
             if (chosen.Length != 4) throw new InvalidOperationException("引擎没有返回可用着法。");
             EngineStatusText.Text = $"{_engine.EngineName} · 搜索完成";
+            if (result.Book is { } hit) ShowOpeningBookHit(hit);
             if (ShowGuidance) BestMoveText.Text = DescribeUci(chosen);
             if (playMove)
             {

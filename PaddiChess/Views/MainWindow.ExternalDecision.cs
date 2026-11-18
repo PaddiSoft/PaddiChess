@@ -99,6 +99,7 @@ public partial class MainWindow
                 {
                     ShowVariations(result.Candidates);
                     EngineStatusText.Text = $"{engine.EngineName} · 搜索完成";
+                    if (result.Book is { } hit) ShowOpeningBookHit(hit);
                 }
                 return new(fen, decision.Move, null) { RuleStartFen = startFen, RuleHistory = moves };
             }

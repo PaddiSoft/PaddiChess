@@ -4,6 +4,8 @@ namespace PaddiXiangqi.Views;
 
 public enum WorkspaceAction
 {
+    BookImport,
+    BookRemove,
     Benchmark,
     BlackLlmTest,
     ClearHash,

@@ -39,7 +39,7 @@ public sealed class ControllerDecisionService(IRuleMoveProvider rules, LlmChessC
             ct.ThrowIfCancellationRequested();
             return new(request.Fen, thought.Move, thought, null, allowed);
         }
-        var result = await engine.SearchAsync(request.StartFen, request.History, request.Settings, engineProgress, ct).ConfigureAwait(false);
+        var result = await engine.SearchAsync(request.StartFen, request.History, request.Settings, engineProgress, ct, bookAllowedMoves: allowed?.Allowed).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
         var move = EngineMoveSelector.Select(result, request.Settings.Level, true, request.Bundled,
             request.LegalMoves, allowed?.Allowed);

@@ -52,6 +52,7 @@ public partial class MainWindow
         try { if (_externalTask is not null) await _externalTask; } catch { }
         try { if (_externalConnectionWarmup is not null) await _externalConnectionWarmup; } catch { }
         await EndExternalHistoryAsync("关闭程序");
+        try { if (_openingBookPreparation is not null) await _openingBookPreparation; } catch { }
         try { if (_searchTask is not null) await _searchTask; } catch { }
         try { if (_llmTask is not null) await _llmTask; } catch { }
         try { await DisposeLlmInsightsAsync(); }

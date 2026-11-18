@@ -46,7 +46,7 @@ public partial class MainWindow
         EndgameMaterialPoints = (int)(EndgameAttackersBox.Value ?? 6)
     };
 
-    private EngineSettings ReadPlayingEngineSettings() => ReadEnginePhases().Apply(_game, ReadEngineSettings());
+    private EngineSettings ReadPlayingEngineSettings() => ReadEnginePhases().Apply(_game, ReadEngineSettings()) with { OpeningBook = ReadOpeningBookOptions() };
 
     private string PlayingBudgetDescription(EngineSettings settings)
     {

@@ -7,6 +7,7 @@ binaries. This is a conservative local check, not a substitute for secret review
 """
 from __future__ import annotations
 
+import hashlib
 import argparse
 import json
 import os
@@ -70,6 +71,12 @@ def scan(name: str, size: int, read, release: bool, findings: list[dict[str, str
         report("private_configuration_or_signing_file")
     if not release and size > MAX_SOURCE_BYTES:
         report("exceeds_github_source_file_limit")
+    # Reviewed numeric-only export, without task records or memo text. A changed
+    # archive must be reviewed again; do not exempt arbitrary compressed files.
+    if Path(name).name == "guagudao-20261118.xqb.gz":
+        if hashlib.sha256(read()).hexdigest() != "65f5473a7c0cf67a136fcbcb7ba1736abd5dc35924ec371e92d38a252807819a":
+            report("opening_book_requires_data_review")
+        return False
     if Path(name).suffix.lower() in OPAQUE_SUFFIXES:
         return False
     if size > MAX_SCAN_BYTES:

@@ -31,6 +31,7 @@
   </ItemGroup>
   <ItemGroup>
     <AvaloniaResource Include="Assets/Brand/*.png" />
+    <Content Include="Assets/OpeningBooks/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Assets/BoardSkins/*.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Assets/BoardSkins/*.skin.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Assets/Ocr/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

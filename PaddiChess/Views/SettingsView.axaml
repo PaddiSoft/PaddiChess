@@ -7,6 +7,27 @@
   <ScrollViewer Margin="0,6,0,0" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
     <Grid ColumnDefinitions="*,*" ColumnSpacing="24" Margin="16,12,16,18">
       <StackPanel Spacing="14">
+      <Border Background="#EEF4FC" CornerRadius="10" Padding="14">
+        <StackPanel Spacing="9">
+          <TextBlock Text="开局库" Classes="heading"/>
+          <CheckBox x:Name="BookEnabledCheck" Content="引擎执棋优先使用开局库"/>
+          <ComboBox x:Name="BookChoiceBox" HorizontalAlignment="Stretch" AutomationProperties.Name="当前开局库"/>
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+            <Button x:Name="BookImportButton" Content="导入开局库…" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.BookImport}"/>
+            <Button x:Name="BookRemoveButton" Grid.Column="1" Content="移除所选库" Click="Action_Click" Tag="{x:Static views:WorkspaceAction.BookRemove}"/>
+          </Grid>
+          <Grid ColumnDefinitions="*,150" ColumnSpacing="10">
+            <TextBlock Text="使用至第几回合" VerticalAlignment="Center"/>
+            <NumericUpDown x:Name="BookRoundsBox" Grid.Column="1" Minimum="1" Maximum="40" Value="20" FormatString="0" AutomationProperties.Name="开局库截止回合"/>
+          </Grid>
+          <ComboBox x:Name="BookPolicyBox" SelectedIndex="0" HorizontalAlignment="Stretch" AutomationProperties.Name="开局库选招策略">
+            <ComboBoxItem Content="最高库分 · 固定选择"/>
+            <ComboBoxItem Content="最高库分 · 同分随机"/>
+          </ComboBox>
+          <TextBlock x:Name="BookStatusText" Text="正在准备内置开局库…" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+          <TextBlock Text="支持导入多个 XQB v1 库，选择即设为默认；文件仅复制到本机，不上传网络。命中后直接选招，未命中自动搜索。仅用于标准开局或首回合接入的引擎执棋和接管；遇到重复局面回到引擎裁定。分析评分和大模型仍按原设置运行。" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+        </StackPanel>
+      </Border>
       <TextBlock Text="棋盘与评分" Classes="heading"/>
       <CheckBox x:Name="ShowCoordinatesCheck" Content="显示棋盘坐标" FontSize="12"/>
       <Grid ColumnDefinitions="*,150" ColumnSpacing="10">

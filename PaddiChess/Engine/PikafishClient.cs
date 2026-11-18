@@ -6,6 +6,7 @@ namespace PaddiXiangqi.Engine;
 
 public sealed record EngineSettings(int Level, int Threads, int HashMb, int ThinkSeconds, int MaxDepth)
 {
+    public OpeningBookOptions? OpeningBook { get; init; }
     public const int MaxHashMb = 16_384;
     public bool UseDepthLimit { get; init; } = true;
     public int? MultiPvOverride { get; init; }
@@ -34,7 +35,10 @@ public sealed record EngineInfo(int Depth, int MultiPv, int? Centipawns, int? Ma
     public string FirstMove => Pv.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
 }
 
-public sealed record SearchResult(string BestMove, IReadOnlyList<EngineInfo> Candidates);
+public sealed record SearchResult(string BestMove, IReadOnlyList<EngineInfo> Candidates)
+{
+    public OpeningBookHit? Book { get; init; }
+}
 
 public sealed partial class PikafishClient : IAsyncDisposable
 {
@@ -80,8 +84,15 @@ public sealed partial class PikafishClient : IAsyncDisposable
 
     public async Task<SearchResult> SearchAsync(string startFen, string uciMoves, EngineSettings settings,
         Action<EngineInfo>? onInfo, CancellationToken cancellationToken,
-        IReadOnlyList<string>? allowedRootMoves = null)
+        IReadOnlyList<string>? allowedRootMoves = null, IReadOnlyList<string>? bookAllowedMoves = null)
     {
+        if (allowedRootMoves is null && settings.OpeningBook is { } book)
+        {
+            var hit = await OpeningBook.TryChooseAsync(startFen, uciMoves, book, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (hit is not null && (bookAllowedMoves is null || bookAllowedMoves.Contains(hit.Move)))
+                return new SearchResult(hit.Move, []) { Book = hit };
+        }
         // Optional explicit search restriction for callers requesting particular
         // variations. Normal play passes no whitelist: the engine judges repetition,
         // perpetual checks and chases using startFen plus the complete move history.

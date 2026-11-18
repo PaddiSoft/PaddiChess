@@ -16,6 +16,11 @@ public sealed class LlmServiceProfile
 
 public sealed class AppPreferences
 {
+    public bool OpeningBookEnabled { get; set; } = true;
+    public int OpeningBookMaxFullmoves { get; set; } = 20;
+    public bool OpeningBookRandomBest { get; set; }
+    public string OpeningBookId { get; set; } = OpeningBookStore.BundledId;
+    public List<OpeningBookProfile> OpeningBooks { get; set; } = [];
     public bool RedEngine { get; set; }
     public bool BlackEngine { get; set; }
     public bool AutoAnalyze { get; set; } = true;
@@ -68,6 +73,12 @@ public sealed class AppPreferences
         catch { preferences = new AppPreferences(); /* A malformed settings file must never prevent the board from opening. */ }
         preferences.LlmBaseUrl ??= "";
         preferences.NormalizeEnginePlugins();
+        preferences.OpeningBooks = (preferences.OpeningBooks ?? []).Where(p => p is not null && !string.IsNullOrWhiteSpace(p.Id) &&
+            p.Id != OpeningBookStore.BundledId && !string.IsNullOrWhiteSpace(p.FileName) &&
+            p.FileName.IndexOfAny(['/', '\\', ':']) < 0 && p.FileName.EndsWith(".xqb", StringComparison.OrdinalIgnoreCase))
+            .Select(p => p with { Name = string.IsNullOrWhiteSpace(p.Name) ? "未命名开局库" : p.Name })
+            .DistinctBy(p => p.Id).ToList();
+        preferences.OpeningBookId ??= OpeningBookStore.BundledId;
         preferences.EnginePhases ??= new();
         preferences.LlmModel ??= "";
         preferences.RedLlmBaseUrl ??= "";

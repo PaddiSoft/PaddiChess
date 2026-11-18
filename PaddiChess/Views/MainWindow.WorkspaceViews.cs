@@ -17,6 +17,8 @@ public partial class MainWindow
     {
         switch (e.Action)
         {
+            case WorkspaceAction.BookImport: ImportOpeningBook(); break;
+            case WorkspaceAction.BookRemove: RemoveOpeningBook(); break;
             case WorkspaceAction.Benchmark: Benchmark_Click(e.Source, e.OriginalArgs); break;
             case WorkspaceAction.BlackLlmTest: BlackLlmTest_Click(e.Source, e.OriginalArgs); break;
             case WorkspaceAction.ClearHash: ClearHash_Click(e.Source, e.OriginalArgs); break;

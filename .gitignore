@@ -30,3 +30,6 @@ __pycache__/
 # Superseded local engine archive; the current engine is versioned separately.
 /Pikafish.2026-09-06/
 /Pikafish.2026-09-25/Pikafish-Android-arm64-universal
+
+# Author-provided raw opening libraries; publish the reviewed compressed asset.
+/*.xqb
